@@ -1,15 +1,20 @@
 #include <iostream>
 #include <fstream>
+#include <vector>
 #include <string>
+#include <iomanip>
 using namespace std;
 
-const int M = 3; // ordem da árvore (máximo 2 chaves por nó)
+const int M = 3; // ordem da árvore
 
+// ============================
+// Estrutura de nó da árvore
+// ============================
 class Node {
 public:
-    int n;                 // número de chaves
-    int keys[M - 1];       // até 2 chaves
-    int children[M];       // até 3 filhos
+    int n;                // número de chaves no nó
+    int keys[M - 1];      // até 2 chaves
+    int children[M];      // até 3 ponteiros (índices de nós em disco)
 
     Node() {
         n = 0;
@@ -18,65 +23,137 @@ public:
     }
 };
 
-// ---- Parte (a): Converte txt → bin ----
+// ============================
+// (a) Converte txt → binário
+// ============================
 void txtToBin(const string &txtFile, const string &binFile) {
     ifstream fin(txtFile);
     ofstream fout(binFile, ios::binary);
 
+    if (!fin) {
+        cerr << "Erro ao abrir " << txtFile << endl;
+        return;
+    }
+
+    int nodeIndex = 1;
     while (true) {
         Node node;
         if (!(fin >> node.n)) break;
 
-        for (int i = 0; i < M; i++) {
-            if (i < node.n) {
-                fin >> node.children[i] >> node.keys[i];
-            } else if (i == node.n) {
-                fin >> node.children[i];
-            } else {
-                node.children[i] = -1;
-            }
+        // lê A0
+        fin >> node.children[0];
+
+        // lê pares (Ki, Ai)
+        for (int i = 0; i < node.n; i++) {
+            fin >> node.keys[i] >> node.children[i + 1];
         }
+
         fout.write((char*)&node, sizeof(Node));
+        nodeIndex++;
     }
+
     fin.close();
     fout.close();
+    cout << "Lendo dados de " << txtFile << " e criando " << binFile << endl;
 }
 
-// ---- Parte (b): Algoritmo de busca ----
-bool mSearch(const string &binFile, int rootPos, int key) {
+// ============================
+// Mostra a árvore em disco
+// ============================
+void printTree(const string &binFile) {
     ifstream fin(binFile, ios::binary);
-    if (!fin) return false;
+    if (!fin) {
+        cerr << "Erro ao abrir " << binFile << endl;
+        return;
+    }
 
-    int pos = rootPos;
+    cout << "T = 1, m = " << M << endl;
+    cout << "------------------------------------------------------------------\n";
+    cout << "No  n,A[0],(K[1],A[1]),...,(K[n],A[n])\n";
+    cout << "------------------------------------------------------------------\n";
+
     Node node;
+    int index = 1;
+    while (fin.read((char*)&node, sizeof(Node))) {
+        cout << setw(2) << index << " " << node.n << ", " << node.children[0];
+        for (int i = 0; i < node.n; i++) {
+            cout << ",(" << setw(2) << node.keys[i] << "," << node.children[i + 1] << ")";
+        }
+        cout << endl;
+        index++;
+    }
 
-    while (pos != -1) {
-        fin.seekg(pos * sizeof(Node));
-        fin.read((char*)&node, sizeof(Node));
+    cout << "------------------------------------------------------------------\n";
+    fin.close();
+}
+
+// ============================
+// (b) Algoritmo mSearch
+// Retorna (no, pos, found)
+// ============================
+struct SearchResult {
+    int nodeIndex;   // índice do nó no arquivo (1-based)
+    int pos;         // posição dentro do nó
+    bool found;      // true se encontrou
+};
+
+SearchResult mSearch(const string &binFile, int key) {
+    ifstream fin(binFile, ios::binary);
+    if (!fin) {
+        cerr << "Erro ao abrir " << binFile << endl;
+        return {-1, -1, false};
+    }
+
+    int posNode = 0; // começa na raiz (posição 0 em disco)
+    Node node;
+    int index = 1;   // índice lógico dos nós (1-based)
+
+    while (true) {
+        fin.seekg(posNode * sizeof(Node));
+        if (!fin.read((char*)&node, sizeof(Node))) break;
 
         int i = 0;
         while (i < node.n && key > node.keys[i]) i++;
 
         if (i < node.n && key == node.keys[i]) {
-            return true; // chave encontrada
+            return {index, i+1, true}; // chave encontrada
         }
-        pos = node.children[i]; // desce para o filho
+
+        if (node.children[i] == 0) { // chegou em folha
+            return {index, i, false};
+        }
+
+        posNode = node.children[i] - 1; // nó filho (ajuste: 1-based -> 0-based)
+        index = node.children[i];
     }
-    return false; // não achou
+
+    return {-1, -1, false};
 }
 
-// ---- Parte (c): Teste ----
+// ============================
+// (c) Programa Principal
+// ============================
 int main() {
     txtToBin("mvias.txt", "mvias.bin");
 
-    cout << "Digite a chave para buscar: ";
-    int key;
-    cin >> key;
+    cout << "Indice mvias.bin aberto" << endl;
 
-    if (mSearch("mvias.bin", 0, key))
-        cout << "Chave encontrada!\n";
-    else
-        cout << "Chave nao encontrada.\n";
+    char cont = 's';
+    while (cont == 's' || cont == 'S') {
+        printTree("mvias.bin");
+
+        cout << "Chave de busca: ";
+        int key;
+        cin >> key;
+
+        SearchResult res = mSearch("mvias.bin", key);
+
+        cout << " " << key << " (" << res.nodeIndex << "," << res.pos << ","
+             << (res.found ? "true" : "false") << ")" << endl;
+
+        cout << "Continuar busca (s/n)? ";
+        cin >> cont;
+    }
 
     return 0;
 }
