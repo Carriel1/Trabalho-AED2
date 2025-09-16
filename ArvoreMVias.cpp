@@ -15,38 +15,31 @@ ArvoreMVias::ArvoreMVias(const string& txt, const string& bin) {
 
 // Gera arquivo binário a partir do txt
 void ArvoreMVias::geradorBinario() {
-    ifstream fin(arquivoTxt);   // Arquivo de entrada txt
-    ofstream fout(arquivoBin, ios::binary);   // Arquivo de saída bin
+    ifstream fin(arquivoTxt);
+    ofstream fout(arquivoBin, ios::binary);
 
     if (!fin) {
         cout << "Erro ao abrir " << arquivoTxt << endl;
         return;
     }
 
-    while(true) {
-        No no;
+    int indice_registro;
+    No no;
 
-        // Inicializa manualmente os campos para evitar lixo de memória
-        no.n = 0;
-        for (int i = 0; i < M - 1; i++) {
-            no.chaves[i] = -1;
-        }
-        for (int i = 0; i < M; i++) {
-            no.filhos[i] = 0;
-        }
+    while (fin >> indice_registro) {
+        // Posiciona o ponteiro de escrita no local correto
+        // 'indice_registro - 1' porque os registros são 1-baseados, mas o seekg é 0-baseado
+        fout.seekp((indice_registro - 1) * sizeof(No));
 
-        if (!(fin >> no.n)) {   // Encerra processo
-            break;
-        }
-
-        // Lê A0
+        // Lê o restante dos dados do nó da linha
+        fin >> no.n;
         fin >> no.filhos[0];
 
-        // Lê pares (Ki, Ai)
         for (int i = 0; i < no.n; i++) {
             fin >> no.chaves[i] >> no.filhos[i + 1];
         }
 
+        // Escreve o nó no local correto do arquivo
         fout.write((char*)&no, sizeof(No));
     }
 
@@ -107,14 +100,6 @@ Resultado ArvoreMVias::mSearch(int chave) {
         if (!fin.read((char*)&no, sizeof(No))) {   // Caso de erro no processo
             cout << "Erro ao ler nó " << p << " do arquivo." << endl;
             return {-1, -1, false};
-        }
-
-        // Inicializa campos que não foram lidos
-        for (int j = no.n; j < M - 1; j++) {
-            no.chaves[j] = -1;
-        }
-        for (int j = no.n + 1; j < M; j++) {
-            no.filhos[j] = 0;
         }
 
         i = 0;

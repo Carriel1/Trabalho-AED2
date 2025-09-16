@@ -11,7 +11,11 @@
 using namespace std;
 
 int main() {
-    ArvoreMVias arvore("mvias.txt", "mvias.bin");
+    ArvoreMVias arvore("mvias1-1.txt", "mvias.bin");   // Árvore a esquerda do item D do trabalho, no primeiro caso
+    // ArvoreMVias arvore("mvias1-2.txt", "mvias.bin");   // Árvore a direita do item D do trabalho, no primeiro caso
+    // ArvoreMVias arvore("mvias2-1.txt", "mvias.bin");   // Árvore a esquerda do item D do trabalho, no segundo caso
+    // ArvoreMVias arvore("mvias2-2.txt", "mvias.bin");   // Árvore a direita do item D do trabalho, no segundo caso
+
     arvore.geradorBinario();
 
     cout << "Indice mvias.bin aberto" << endl;
@@ -27,7 +31,7 @@ int main() {
 
         Resultado res = arvore.mSearch(chave);
         cout << " " << chave << " (" << res.indice_no << "," << res.posicao << ","
-             << (res.encontrou ? "true" : "false") << ")" << endl;
+             << (res.encontrou ? "true" : "false") << ")" << endl;   // ternário para facilitar a impressão de true ou false
 
         cout << "Continuar busca (s/n)? ";
         cin >> cont;
