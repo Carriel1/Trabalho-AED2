@@ -1,9 +1,9 @@
 // Integrantes do grupo:
-// Caio Monteiro Sartori   N∞ 15444598
-// Mateus Henrique Carriel   N∞ 15698362
-// Murilo Augusto Jorge   N∞ 15552251
+// Caio Monteiro Sartori   N¬∞ 15444598
+// Mateus Henrique Carriel   N¬∞ 15698362
+// Murilo Augusto Jorge   N¬∞ 15552251
 
-// Arquivo .h de definiÁ„o da classe ¡rvore de M-vias
+// Arquivo .h de defini√ß√£oo da classe √°rvore de M-vias
 
 #ifndef ARVOREMVIAS_H
 #define ARVOREMVIAS_H
@@ -15,32 +15,39 @@
 
 using namespace std;
 
-const int M = 3; // Ordem da ¡rvore M-vias
+const int M = 3; // Ordem da √°rvore M-vias
 
 // Resultado da busca
 struct Resultado {
-    int indice_no;  // Ìndice do nÛ no arquivo
-    int posicao;        // posiÁ„o dentro do nÛ
+    int indice_no;  // √≠ndice do n√≥ no arquivo
+    int posicao;        // posi√ß√£o dentro do n√≥
     bool encontrou;     // true se encontrou
 };
 
-// Classe da ¡rvore M-vias
+// Classe da √°rvore M-vias
 class ArvoreMVias {
 private:
     string arquivoTxt;
     string arquivoBin;
 
     struct No {
-        int n;                // n˙mero de chaves no nÛ
-        int chaves[M - 1];      // atÈ M-1 chaves
-        int filhos[M];      // atÈ M filhos (Ìndices de nÛs em disco)
+        int n;                // n√∫mero de chaves no n√≥
+        int chaves[M - 1];      // at√© M-1 chaves
+        int filhos[M];      // at√© M filhos (√≠ndices de n√≥s em disco)
     };
 
 public:
     ArvoreMVias(const string& txt, const string& bin); // construtor da classe
-    void geradorBinario();        // lÍ txt e cria bin·rio
-    void print();              // imprime a ·rvore
+    void geradorBinario();        // l√™ txt e cria bin√°rio
+    void print();              // imprime a √°rvore
     Resultado mSearch(int chave); // busca chave
 };
 
 #endif
+
+/*
+D) O algoritmo mSearch funciona corretamente quando a raiz est√° no registro 1, como no primeiro caso. 
+No segundo, a raiz foi renumerada e n√£o est√° mais no registro 1, mas o c√≥digo continua assumindo que a busca deve come√ßar dali. 
+Por isso ele falha: a implementa√ß√£o n√£o registra dinamicamente qual √© o √≠ndice real da raiz, apenas sup√µe que sempre ser√° o primeiro. 
+Esse comportamento j√° era esperado, dado o modo como o algoritmo foi constru√≠do.
+*/

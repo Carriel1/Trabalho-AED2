@@ -1,9 +1,9 @@
 // Integrantes do grupo:
-// Caio Monteiro Sartori   N° 15444598
-// Mateus Henrique Carriel   N° 15698362
-// Murilo Augusto Jorge   N° 15552251
+// Caio Monteiro Sartori   NÂ° 15444598
+// Mateus Henrique Carriel   NÂ° 15698362
+// Murilo Augusto Jorge   NÂ° 15552251
 
-// Arquivo .cpp de implementação da classe Árvore M-vias
+// Arquivo .cpp de implementaÃ§Ã£o da classe Ã¡rvore M-vias
 
 #include "ArvoreMVias.h"
 
@@ -13,7 +13,7 @@ ArvoreMVias::ArvoreMVias(const string& txt, const string& bin) {
     arquivoBin = bin;
 }
 
-// Gera arquivo binário a partir do txt
+// Gera arquivo binÃ¡rio a partir do txt
 void ArvoreMVias::geradorBinario() {
     ifstream fin(arquivoTxt);
     ofstream fout(arquivoBin, ios::binary);
@@ -28,10 +28,10 @@ void ArvoreMVias::geradorBinario() {
 
     while (fin >> indice_registro) {
         // Posiciona o ponteiro de escrita no local correto
-        // 'indice_registro - 1' porque os registros são 1-baseados, mas o seekg é 0-baseado
+        // 'indice_registro - 1' porque os registros sÃ£o 1-baseados, mas o seekg Ã© 0-baseado
         fout.seekp((indice_registro - 1) * sizeof(No));
 
-        // Lê o restante dos dados do nó da linha
+        // LÃ© o restante dos dados do nÃ³ da linha
         fin >> no.n;
         fin >> no.filhos[0];
 
@@ -39,7 +39,7 @@ void ArvoreMVias::geradorBinario() {
             fin >> no.chaves[i] >> no.filhos[i + 1];
         }
 
-        // Escreve o nó no local correto do arquivo
+        // Escreve o nÃ³ no local correto do arquivo
         fout.write((char*)&no, sizeof(No));
     }
 
@@ -48,7 +48,7 @@ void ArvoreMVias::geradorBinario() {
     cout << "Lendo dados de " << arquivoTxt << " e criando " << arquivoBin << endl;
 }
 
-// Imprime a árvore
+// Imprime a Ã¡rvore
 void ArvoreMVias::print() {
     ifstream fin(arquivoBin, ios::binary);
 
@@ -89,7 +89,7 @@ Resultado ArvoreMVias::mSearch(int chave) {
         return {-1, -1, false};
     }
 
-    int p = 1;  // raiz é nó 1
+    int p = 1;  // raiz Ã© nÃ³ 1
     int q = 0;  // pai de p
     No no;
     int i = 0;
@@ -98,7 +98,7 @@ Resultado ArvoreMVias::mSearch(int chave) {
         fin.seekg((p - 1) * sizeof(No));
 
         if (!fin.read((char*)&no, sizeof(No))) {   // Caso de erro no processo
-            cout << "Erro ao ler nó " << p << " do arquivo." << endl;
+            cout << "Erro ao ler nï¿½ " << p << " do arquivo." << endl;
             return {-1, -1, false};
         }
 
