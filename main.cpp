@@ -39,6 +39,11 @@ int main() {
             cin >> chave;
             Resultado res = arvore.mSearch(chave);
             cout << chave << " (" << res.indice_no << "," << res.posicao << "," << (res.encontrou ? "true" : "false") << ")\n";
+
+            if (res.encontrou) { // NOVO: mostrar conteúdo associado
+                cout << "Conteudo encontrado no arquivo principal:\n";
+                arvore.imprimirArquivoPrincipal();
+            }
         }
         else if (escolha == 4) {
             int chave;
@@ -56,3 +61,4 @@ int main() {
 
     return 0;
 }
+

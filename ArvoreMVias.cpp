@@ -7,16 +7,14 @@
 
 #include "ArvoreMVias.h"
 
-// Construtor
 ArvoreMVias::ArvoreMVias(const string& txt, const string& bin, const string& dados, int ordem) {
     arquivoTxt = txt;
     arquivoBin = bin;
     arquivoDados = dados;
     M = ordem;
-    raiz = 1; // início padrão
+    raiz = 1;
 }
 
-// Gera arquivo binário a partir do txt
 void ArvoreMVias::geradorBinario() {
     ifstream fin(arquivoTxt);
     ofstream fout(arquivoBin, ios::binary);
@@ -33,7 +31,6 @@ void ArvoreMVias::geradorBinario() {
 
     while (fin >> indice_registro) {
         fout.seekp((indice_registro - 1) * sizeof(No));
-
         fin >> no.n;
         fin >> no.filhos[0];
 
@@ -49,10 +46,8 @@ void ArvoreMVias::geradorBinario() {
     cout << "Lendo dados de " << arquivoTxt << " e criando " << arquivoBin << endl;
 }
 
-// Imprime árvore
 void ArvoreMVias::print() {
     ifstream fin(arquivoBin, ios::binary);
-
     if (!fin) {
         cout << "Erro ao abrir " << arquivoBin << endl;
         return;
@@ -67,6 +62,7 @@ void ArvoreMVias::print() {
     int _indice = 1;
 
     while (fin.read((char*)&no, sizeof(No))) {
+        leituraDisco++; // NOVO
         cout << setw(2) << _indice << " " << no.n << ", " << no.filhos[0];
 
         for (int i = 0; i < no.n; i++) {
@@ -80,10 +76,8 @@ void ArvoreMVias::print() {
     fin.close();
 }
 
-// Busca mSearch
 Resultado ArvoreMVias::mSearch(int chave) {
     ifstream fin(arquivoBin, ios::binary);
-
     if (!fin) {
         cerr << "Erro ao abrir " << arquivoBin << endl;
         return {-1, -1, false};
@@ -95,8 +89,8 @@ Resultado ArvoreMVias::mSearch(int chave) {
     int i = 0;
 
     while (p != 0) {
+        leituraDisco++; // NOVO
         fin.seekg((p - 1) * sizeof(No));
-
         if (!fin.read((char*)&no, sizeof(No))) {
             cout << "Erro ao ler no " << p << " do arquivo." << endl;
             return {-1, -1, false};
@@ -105,35 +99,34 @@ Resultado ArvoreMVias::mSearch(int chave) {
         i = 0;
         while (i < no.n && chave >= no.chaves[i]) {
             if (chave == no.chaves[i]) {
+                cout << "Chave encontrada!\n";
                 return {p, i + 1, true};
             }
             i++;
         }
-
         q = p;
         p = no.filhos[i];
     }
-
+    cout << "Chave nao encontrada.\n";
     return {q, i, false};
 }
 
-// Inserção em árvore B
 void ArvoreMVias::insertB(int chave, const string& dadosElemento) {
-    // Inserir em arquivo principal
     ofstream foutDados(arquivoDados, ios::app);
     foutDados << chave << " " << dadosElemento << endl;
     foutDados.close();
 
-    // Aqui colocar lógica de inserção em árvore B com split
-    cout << "Insercao da chave " << chave << " realizada (metodo insertB ainda precisa ser implementado completamente)." << endl;
+    escritaDisco++; // NOVO
+
+    cout << "Insercao da chave " << chave << " realizada (metodo insertB precisa ser completado com logica de arvore B)." << endl;
 }
 
-// Imprime índice
 void ArvoreMVias::imprimirIndice() {
     print();
+    cout << "Numero de leituras de disco: " << leituraDisco << endl; // NOVO
+    cout << "Numero de escritas de disco: " << escritaDisco << endl; // NOVO
 }
 
-// Imprime arquivo principal
 void ArvoreMVias::imprimirArquivoPrincipal() {
     ifstream fin(arquivoDados);
     string linha;

@@ -16,28 +16,28 @@
 
 using namespace std;
 
-// Resultado da busca
 struct Resultado {
-    int indice_no;  // índice do nó no arquivo
-    int posicao;     // posição dentro do nó
-    bool encontrou;  // true se encontrou
+    int indice_no;
+    int posicao;
+    bool encontrou;
 };
 
-// Classe da árvore M-vias (árvore B parametrizada)
 class ArvoreMVias {
 private:
     string arquivoTxt;
     string arquivoBin;
-    string arquivoDados; // arquivo principal com dados
-    int M; // ordem da árvore
+    string arquivoDados;
+    int M;
+    int raiz;
+
+    int leituraDisco = 0;   // NOVO: contador de leituras
+    int escritaDisco = 0;   // NOVO: contador de escritas
 
     struct No {
-        int n;                  // número de chaves no nó
-        vector<int> chaves;    // até M-1 chaves
-        vector<int> filhos;    // até M filhos
+        int n;
+        vector<int> chaves;
+        vector<int> filhos;
     };
-
-    int raiz; // índice do nó raiz
 
     void split(int noAtual, int chave, int filho);
     void inserirRec(int noAtual, int chave, int filho);
@@ -53,3 +53,4 @@ public:
 };
 
 #endif
+
