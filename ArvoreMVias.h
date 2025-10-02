@@ -12,42 +12,44 @@
 #include <fstream>
 #include <iomanip>
 #include <string>
+#include <vector>
 
 using namespace std;
-
-const int M = 3; // Ordem da árvore M-vias
 
 // Resultado da busca
 struct Resultado {
     int indice_no;  // índice do nó no arquivo
-    int posicao;        // posição dentro do nó
-    bool encontrou;     // true se encontrou
+    int posicao;     // posição dentro do nó
+    bool encontrou;  // true se encontrou
 };
 
-// Classe da árvore M-vias
+// Classe da árvore M-vias (árvore B parametrizada)
 class ArvoreMVias {
 private:
     string arquivoTxt;
     string arquivoBin;
+    string arquivoDados; // arquivo principal com dados
+    int M; // ordem da árvore
 
     struct No {
-        int n;                // número de chaves no nó
-        int chaves[M - 1];      // até M-1 chaves
-        int filhos[M];      // até M filhos (índices de nós em disco)
+        int n;                  // número de chaves no nó
+        vector<int> chaves;    // até M-1 chaves
+        vector<int> filhos;    // até M filhos
     };
 
+    int raiz; // índice do nó raiz
+
+    void split(int noAtual, int chave, int filho);
+    void inserirRec(int noAtual, int chave, int filho);
+
 public:
-    ArvoreMVias(const string& txt, const string& bin); // construtor da classe
-    void geradorBinario();        // lê txt e cria binário
-    void print();              // imprime a árvore
-    Resultado mSearch(int chave); // busca chave
+    ArvoreMVias(const string& txt, const string& bin, const string& dados, int ordem);
+    void geradorBinario();
+    void print();
+    Resultado mSearch(int chave);
+    void insertB(int chave, const string& dadosElemento);
+    void imprimirIndice();
+    void imprimirArquivoPrincipal();
 };
 
 #endif
-
-/*
-D) O algoritmo mSearch funciona corretamente quando a raiz está no registro 1, como no primeiro caso. 
-No segundo, a raiz foi renumerada e não está mais no registro 1, mas o código continua assumindo que a busca deve começar dali. 
-Por isso ele falha: a implementação não registra dinamicamente qual é o índice real da raiz, apenas supõe que sempre será o primeiro. 
-Esse comportamento já era esperado, dado o modo como o algoritmo foi construído.
-*/

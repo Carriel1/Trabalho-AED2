@@ -11,30 +11,47 @@
 using namespace std;
 
 int main() {
-    ArvoreMVias arvore("mvias1-1.txt", "mvias.bin");   // Árvore a esquerda do item D do trabalho, no primeiro caso
-    // ArvoreMVias arvore("mvias1-2.txt", "mvias.bin");   // Árvore a direita do item D do trabalho, no primeiro caso
-    // ArvoreMVias arvore("mvias2-1.txt", "mvias.bin");   // Árvore a esquerda do item D do trabalho, no segundo caso
-    // ArvoreMVias arvore("mvias2-2.txt", "mvias.bin");   // Árvore a direita do item D do trabalho, no segundo caso
+    int ordem;
+    cout << "Digite a ordem da arvore B: ";
+    cin >> ordem;
+
+    ArvoreMVias arvore("mvias1-1.txt", "mvias.bin", "dados.txt", ordem);
 
     arvore.geradorBinario();
 
-    cout << "Indice mvias.bin aberto" << endl;
+    char opcao = 's';
+    while (opcao == 's' || opcao == 'S') {
+        cout << "\nMenu:\n";
+        cout << "1 - Imprimir indice\n";
+        cout << "2 - Imprimir arquivo principal\n";
+        cout << "3 - Buscar elemento\n";
+        cout << "4 - Inserir elemento\n";
+        cout << "0 - Sair\n";
+        cout << "Escolha: ";
+        int escolha;
+        cin >> escolha;
 
-    char cont = 's'; // Váriavel de continuação das buscas
-
-    while (cont == 's' || cont == 'S') {
-        arvore.print();
-
-        cout << "Chave de busca: ";
-        int chave;
-        cin >> chave;
-
-        Resultado res = arvore.mSearch(chave);
-        cout << " " << chave << " (" << res.indice_no << "," << res.posicao << ","
-             << (res.encontrou ? "true" : "false") << ")" << endl;   // ternário para facilitar a impressão de true ou false
-
-        cout << "Continuar busca (s/n)? ";
-        cin >> cont;
+        if (escolha == 1) arvore.imprimirIndice();
+        else if (escolha == 2) arvore.imprimirArquivoPrincipal();
+        else if (escolha == 3) {
+            int chave;
+            cout << "Digite a chave: ";
+            cin >> chave;
+            Resultado res = arvore.mSearch(chave);
+            cout << chave << " (" << res.indice_no << "," << res.posicao << "," << (res.encontrou ? "true" : "false") << ")\n";
+        }
+        else if (escolha == 4) {
+            int chave;
+            string dados;
+            cout << "Digite a chave: ";
+            cin >> chave;
+            cout << "Digite os dados: ";
+            cin.ignore();
+            getline(cin, dados);
+            arvore.insertB(chave, dados);
+        }
+        else if (escolha == 0) break;
+        else cout << "Opcao invalida.\n";
     }
 
     return 0;
