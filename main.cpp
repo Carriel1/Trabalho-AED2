@@ -6,17 +6,24 @@
 // Arquivo main do trabalho, rodando o mSearch
 
 #include <iostream>
+#include <string>
 #include "ArvoreMVias.h"
 
 using namespace std;
 
 int main() {
     int ordem;
-    cout << "Digite a ordem da arvore B: ";
+    cout << "Digite a ordem da arvore B (M >= 3): ";
     cin >> ordem;
+    if (ordem < 3) {
+        cout << "Ordem precisa ser >= 3. Encerrando.\n";
+        return 1;
+    }
 
-    ArvoreMVias arvore("mvias1-1.txt", "mvias.bin", "dados.txt", ordem);
+    // nomes de arquivo (podem ser alterados)
+    ArvoreMVias arvore("mvias.txt", "mvias.bin", "dados.txt", ordem);
 
+    // cria/garante estrutura binaria inicial (arquivo .bin com header e raiz vazia)
     arvore.geradorBinario();
 
     char opcao = 's';
@@ -40,9 +47,9 @@ int main() {
             Resultado res = arvore.mSearch(chave);
             cout << chave << " (" << res.indice_no << "," << res.posicao << "," << (res.encontrou ? "true" : "false") << ")\n";
 
-            if (res.encontrou) { // NOVO: mostrar conteúdo associado
-                cout << "Conteudo encontrado no arquivo principal:\n";
-                arvore.imprimirArquivoPrincipal();
+            if (res.encontrou) { // mostrar conteúdo associado no arquivo de dados
+                cout << "Conteudo(s) encontrado(s) no arquivo principal:\n";
+                arvore.imprimirArquivoPrincipal(chave); // imprime apenas linhas com a chave
             }
         }
         else if (escolha == 4) {
@@ -57,8 +64,10 @@ int main() {
         }
         else if (escolha == 0) break;
         else cout << "Opcao invalida.\n";
+
+        cout << "\nDeseja continuar? (s/n): ";
+        cin >> opcao;
     }
 
     return 0;
 }
-

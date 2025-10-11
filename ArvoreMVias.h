@@ -17,8 +17,8 @@
 using namespace std;
 
 struct Resultado {
-    int indice_no;
-    int posicao;
+    int indice_no; // id do nó onde a busca terminou (ou onde deveria estar)
+    int posicao;   // posição dentro do nó (1-based) ou posição de inserção
     bool encontrou;
 };
 
@@ -27,30 +27,51 @@ private:
     string arquivoTxt;
     string arquivoBin;
     string arquivoDados;
-    int M;
-    int raiz;
+    int M;      // ordem (numero máximo de filhos)
+    int raiz;   // id do nó raiz (1-based)
+    int nextNodeId; // próximo id disponível (1-based)
 
-    int leituraDisco = 0;   // NOVO: contador de leituras
-    int escritaDisco = 0;   // NOVO: contador de escritas
+    // contadores de I/O
+    int leituraDisco;
+    int escritaDisco;
 
-    struct No {
-        int n;
-        vector<int> chaves;
-        vector<int> filhos;
-    };
+    // helper: numero de inteiros por nó no arquivo binario = 2 + (M-1) + M
+    int nodeInts() const;
 
-    void split(int noAtual, int chave, int filho);
-    void inserirRec(int noAtual, int chave, int filho);
+    // leitura/escrita de header (M, raiz, nextNodeId)
+    void writeHeader();
+    bool readHeader();
+
+    // leitura/escrita de nós serializados como inteiros
+    void writeNode(int id, const vector<int>& vals); // vals size = nodeInts()
+    bool readNode(int id, vector<int>& vals);
+
+    // helpers para manipular o nó em vetor<int>:
+    int node_get_n(const vector<int>& vals) const;
+    void node_set_n(vector<int>& vals, int n);
+    bool node_get_folha(const vector<int>& vals) const;
+    void node_set_folha(vector<int>& vals, bool folha);
+    int node_get_chave(const vector<int>& vals, int idx) const; // idx: 0..M-2
+    void node_set_chave(vector<int>& vals, int idx, int chave);
+    int node_get_filho(const vector<int>& vals, int idx) const; // idx: 0..M-1
+    void node_set_filho(vector<int>& vals, int idx, int filho);
+
+    // criação de nó novo
+    int createNode(bool folha);
+
+    // operações clássicas de B-tree em disco
+    void splitChild(int parentId, int childIndex /* 0-based index in parent */, int childId);
+    void insertNonFull(int nodeId, int chave);
 
 public:
     ArvoreMVias(const string& txt, const string& bin, const string& dados, int ordem);
-    void geradorBinario();
-    void print();
+    void geradorBinario(); // inicializa o arquivo binario (header + raiz vazia)
+    void print(); // imprime todos os nós contidos no binario (em ordem de id)
     Resultado mSearch(int chave);
     void insertB(int chave, const string& dadosElemento);
     void imprimirIndice();
-    void imprimirArquivoPrincipal();
+    void imprimirArquivoPrincipal(); // imprime tudo
+    void imprimirArquivoPrincipal(int chave); // imprime apenas linhas com a chave (se encontrada)
 };
 
 #endif
-
