@@ -1,9 +1,9 @@
 // Integrantes do grupo:
-// Caio Monteiro Sartori   N° 15444598
-// Mateus Henrique Carriel   N° 15698362
-// Murilo Augusto Jorge   N° 15552251
+// Caio Monteiro Sartori   N 15444598
+// Mateus Henrique Carriel   N 15698362
+// Murilo Augusto Jorge   N 15552251
 
-// Arquivo .cpp de implementação da classe árvore M-vias
+// Arquivo .CPP de definicao da classe arvoreB
 
 #include "ArvoreMVias.h"
 #include <cstring>
@@ -12,6 +12,9 @@
 #include <iostream>
 #include <iomanip>
 
+using namespace std;
+
+// ----------------- Construtor -------------------
 ArvoreMVias::ArvoreMVias(const string& txt, const string& bin, const string& dados, int ordem) {
     arquivoTxt = txt;
     arquivoBin = bin;
@@ -28,6 +31,7 @@ int ArvoreMVias::nodeInts() const {
     return 2 + (M - 1) + M; // 2 * M + 1
 }
 
+// ----------------- Header -------------------
 void ArvoreMVias::writeHeader() {
     // Abre o arquivo binario, criando-o se nao existir
     fstream fout(arquivoBin, ios::binary | ios::in | ios::out);
@@ -35,6 +39,7 @@ void ArvoreMVias::writeHeader() {
         ofstream cr(arquivoBin, ios::binary);
         cr.close();
         fout.open(arquivoBin, ios::binary | ios::in | ios::out);
+        cout << "Arquivo binario criado e header inicializado.\n";
     }
     // Grava M, raiz e nextNodeId no inicio
     fout.seekp(0);
@@ -48,6 +53,7 @@ void ArvoreMVias::writeHeader() {
 bool ArvoreMVias::readHeader() {
     ifstream fin(arquivoBin, ios::binary);
     if (!fin) return false;
+
     fin.seekg(0);
     int aM, aRaiz, aNext;
     if (!fin.read((char*)&aM, sizeof(int))) { fin.close(); return false; }
@@ -74,7 +80,6 @@ bool ArvoreMVias::readHeader() {
     }
     raiz = aRaiz;
     nextNodeId = aNext;
-    fin.close();
     return true;
 }
 
@@ -90,8 +95,7 @@ void ArvoreMVias::writeNode(int id, const vector<int>& vals) {
     streampos pos = static_cast<std::streamoff>(headerBytes) + static_cast<std::streamoff>((id - 1) * nodeBytes);
     fout.seekp(pos);
     for (int i = 0; i < ints; ++i) {
-        int v = vals[i];
-        fout.write((char*)&v, sizeof(int));
+        fout.write((char*)&vals[i], sizeof(int));
     }
     fout.close();
     // escritaDisco++; // Incrementa o contador de acesso a disco (escrita)
@@ -100,7 +104,11 @@ void ArvoreMVias::writeNode(int id, const vector<int>& vals) {
 // Simula a leitura de um bloco no disco (incrementa leituraDisco)
 bool ArvoreMVias::readNode(int id, vector<int>& vals) {
     ifstream fin(arquivoBin, ios::binary);
-    if (!fin) return false;
+    if (!fin) { 
+        cerr << "Erro ao abrir arquivo binario para leitura.\n"; 
+        return false; 
+    }
+
     int headerBytes = 3 * sizeof(int);
     int ints = nodeInts();
     int nodeBytes = ints * sizeof(int);
@@ -118,9 +126,7 @@ bool ArvoreMVias::readNode(int id, vector<int>& vals) {
     fin.seekg(pos);
     vals.assign(ints, 0);
     for (int i = 0; i < ints; ++i) {
-        int v = 0;
-        fin.read((char*)&v, sizeof(int));
-        vals[i] = v;
+        fin.read((char*)&vals[i], sizeof(int));
     }
     fin.close();
     // leituraDisco++; // Incrementa o contador de acesso a disco (leitura)
@@ -139,8 +145,7 @@ void ArvoreMVias::node_set_filho(vector<int>& vals, int idx, int filho) { vals[2
 
 int ArvoreMVias::createNode(bool folha) {
     int id = nextNodeId++;
-    int ints = nodeInts();
-    vector<int> vals(ints, 0);
+    vector<int> vals(nodeInts(), 0);
     node_set_n(vals, 0);
     node_set_folha(vals, folha);
     // Inicializa filhos e chaves com 0
@@ -194,8 +199,9 @@ void ArvoreMVias::print() {
         cout << endl;
     }
 
-    cout << "------------------------------------------------------------------\n";
-}
+    // mover chaves
+    for(int j=0;j<z_n;j++)
+        node_set_chave(zVals,j,node_get_chave(childVals,j+t));
 
 // Requisito C: mSearch - Retorna o triplo (ID No, Posicao, Encontrado)
 Resultado ArvoreMVias::mSearch(int chave) {
@@ -316,7 +322,8 @@ void ArvoreMVias::splitChild(int parentId, int childIndex, int childId) {
     cout << "Split do No " << childId << " realizado. Chave mediana " << med << " promovida ao No " << parentId << endl;
 }
 
-void ArvoreMVias::insertNonFull(int nodeId, int chave) {
+// ----------------- Insercao em no nao cheio -------------------
+void ArvoreMVias::insertNonFull(int nodeId,int chave){
     vector<int> nodeVals;
     readNode(nodeId, nodeVals);
     int n = node_get_n(nodeVals);
@@ -330,9 +337,10 @@ void ArvoreMVias::insertNonFull(int nodeId, int chave) {
             node_set_chave(nodeVals, i + 1, node_get_chave(nodeVals, i));
             i--;
         }
-        node_set_chave(nodeVals, i + 1, chave);
-        node_set_n(nodeVals, n + 1);
-        writeNode(nodeId, nodeVals);
+        node_set_chave(nodeVals,i+1,chave);
+        node_set_n(nodeVals,n+1);
+        writeNode(nodeId,nodeVals); escritaDisco++;
+        cout << "Chave " << chave << " inserida na folha " << nodeId << "\n";
     } else {
         // Encontra o filho para descer
         int i = n - 1;
@@ -359,8 +367,8 @@ void ArvoreMVias::insertNonFull(int nodeId, int chave) {
                 childIndex = childIndex + 1;
             }
         }
-        int nextChild = node_get_filho(nodeVals, childIndex);
-        insertNonFull(nextChild, chave);
+
+        insertNonFull(node_get_filho(nodeVals,childIndex),chave);
     }
 }
 
@@ -394,6 +402,7 @@ void ArvoreMVias::insertB(int chave, const string& dadosElemento) {
         return;
     }
 
+    if(!readHeader()) return;
     vector<int> rootVals;
     readNode(raiz, rootVals);
 
@@ -433,10 +442,8 @@ void ArvoreMVias::imprimirIndice() {
 // Requisito B: Imprime todo o arquivo principal
 void ArvoreMVias::imprimirArquivoPrincipal() {
     ifstream fin(arquivoDados);
-    if (!fin) {
-        cout << "Arquivo de dados vazio ou nao existe (" << arquivoDados << ").\n";
-        return;
-    }
+    if(!fin){ cout<<"Arquivo de dados vazio ou nao existe.\n"; return; }
+
     string linha;
     cout << "\n--- Conteudo COMPLETO do Arquivo Principal (" << arquivoDados << ") ---\n";
     while (getline(fin, linha)) {
@@ -460,13 +467,18 @@ void ArvoreMVias::imprimirArquivoPrincipal(int chave) {
         // Tenta extrair a primeira palavra (que e a chave) como inteiro
         stringstream ss(linha);
         int k;
-        if (ss >> k) {
-            if (k == chave) {
-                cout << linha << endl;
-                found = true;
-            }
-        }
+        if(ss>>k && k==chave){ cout<<linha<<endl; found=true; }
     }
     if (!found) cout << "Nenhum registro com a chave " << chave << " encontrado no arquivo principal (Busca Lenta).\n";
     fin.close();
+}
+
+// ----------------- Inicializacao -------------------
+void ArvoreMVias::geradorBinario(){
+    if(!readHeader()){
+        raiz=1; nextNodeId=1; writeHeader(); createNode(true);
+        cout<<"Arquivo binario inicializado com raiz vazia.\n";
+    }else{
+        cout<<"Arquivo binario existente lido. raiz="<<raiz<<" nextNodeId="<<nextNodeId<<"\n";
+    }
 }
