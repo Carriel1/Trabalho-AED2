@@ -31,7 +31,7 @@ private:
     int raiz;   // id do nó raiz (1-based)
     int nextNodeId; // próximo id disponível (1-based)
 
-    // contadores de I/O
+    // contadores de I/O para inserção e busca
     int leituraDisco;
     int escritaDisco;
 

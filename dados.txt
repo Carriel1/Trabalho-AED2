@@ -1,4 +1,0 @@
-10 João
-20 Maria
-30 Pedro
-40 Ana
