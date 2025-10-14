@@ -1,9 +1,9 @@
 // Integrantes do grupo:
-// Caio Monteiro Sartori   N° 15444598
-// Mateus Henrique Carriel   N° 15698362
-// Murilo Augusto Jorge   N° 15552251
+// Caio Monteiro Sartori   N 15444598
+// Mateus Henrique Carriel   N 15698362
+// Murilo Augusto Jorge   N 15552251
 
-// Arquivo .CPP de definiçãoo da classe árvoreB
+// Arquivo .CPP de definicao da classe arvoreB
 
 #include "ArvoreMVias.h"
 #include <cstring>
@@ -27,7 +27,7 @@ ArvoreMVias::ArvoreMVias(const string& txt, const string& bin, const string& dad
     escritaDisco = 0;
 }
 
-// ----------------- Helper: tamanho do nó -------------------
+// ----------------- Helper: tamanho do no -------------------
 int ArvoreMVias::nodeInts() const {
     return 2 + (M - 1) + M; // n, folha, chaves (M-1), filhos (M)
 }
@@ -59,21 +59,24 @@ bool ArvoreMVias::readHeader() {
     if (!fin.read((char*)&aM, sizeof(int))) { fin.close(); return false; }
     if (!fin.read((char*)&aRaiz, sizeof(int))) { fin.close(); return false; }
     if (!fin.read((char*)&aNext, sizeof(int))) { fin.close(); return false; }
+    fin.close();
 
-    if (aM != M) { 
-        fin.close(); 
-        writeHeader(); 
-        cout << "Header existente com M diferente, recriado.\n";
-        return true; 
+    if (aM != M) {
+        cout << "Ordem M diferente da existente no arquivo. Arquivo antigo sera apagado e recriado.\n";
+        remove(arquivoBin.c_str()); // apaga arquivo binario antigo
+        raiz = 1;
+        nextNodeId = 1;
+        writeHeader();
+        createNode(true); // cria raiz vazia
+        return true;
     }
 
     raiz = aRaiz;
     nextNodeId = aNext;
-    fin.close();
     return true;
 }
 
-// ----------------- Leitura/Escrita de nós -------------------
+// ----------------- Leitura/Escrita de nos -------------------
 void ArvoreMVias::writeNode(int id, const vector<int>& vals) {
     fstream fout(arquivoBin, ios::in | ios::out | ios::binary);
     if (!fout) { 
@@ -113,7 +116,7 @@ bool ArvoreMVias::readNode(int id, vector<int>& vals) {
     streampos fileSize = fin.tellg();
     if (pos + static_cast<streamoff>(nodeBytes) > fileSize) { 
         fin.close(); 
-        cerr << "Tentativa de ler nó além do final do arquivo. id=" << id << endl;
+        cerr << "Tentativa de ler no alem do final do arquivo. id=" << id << endl;
         return false; 
     }
 
@@ -138,7 +141,7 @@ void ArvoreMVias::node_set_chave(vector<int>& vals, int idx, int chave) { vals[2
 int ArvoreMVias::node_get_filho(const vector<int>& vals, int idx) const { return vals[2 + (M-1) + idx]; }
 void ArvoreMVias::node_set_filho(vector<int>& vals, int idx, int filho) { vals[2 + (M-1) + idx] = filho; }
 
-// ----------------- Criação de nó -------------------
+// ----------------- Criacao de no -------------------
 int ArvoreMVias::createNode(bool folha) {
     int id = nextNodeId++;
     vector<int> vals(nodeInts(), 0);
@@ -157,13 +160,13 @@ int ArvoreMVias::createNode(bool folha) {
     return id;
 }
 
-// ----------------- Split de nó filho -------------------
+// ----------------- Split de no filho -------------------
 void ArvoreMVias::splitChild(int parentId, int childIndex, int childId) {
     vector<int> parentVals, childVals;
-    if(!readNode(parentId, parentVals)) { cerr<<"Erro: não conseguiu ler parent no split.\n"; return; }
-    if(!readNode(childId, childVals)) { cerr<<"Erro: não conseguiu ler child no split.\n"; return; }
+    if(!readNode(parentId, parentVals)) { cerr<<"Erro: nao conseguiu ler parent no split.\n"; return; }
+    if(!readNode(childId, childVals)) { cerr<<"Erro: nao conseguiu ler child no split.\n"; return; }
 
-    int t = (M+1)/2; // grau mínimo
+    int t = (M+1)/2; // grau minimo
     int y_n = node_get_n(childVals);
 
     int zId = createNode(node_get_folha(childVals));
@@ -177,7 +180,7 @@ void ArvoreMVias::splitChild(int parentId, int childIndex, int childId) {
     for(int j=0;j<z_n;j++)
         node_set_chave(zVals,j,node_get_chave(childVals,j+t));
 
-    // mover filhos se necessário
+    // mover filhos se necessario
     if(!node_get_folha(childVals)){
         for(int j=0;j<=z_n;j++)
             node_set_filho(zVals,j,node_get_filho(childVals,j+t));
@@ -200,13 +203,13 @@ void ArvoreMVias::splitChild(int parentId, int childIndex, int childId) {
     writeNode(zId,zVals); escritaDisco++;
     writeNode(parentId,parentVals); escritaDisco++;
 
-    cout << "Split do nó " << childId << " feito. Novo nó " << zId << " criado.\n";
+    cout << "Split do no " << childId << " feito. Novo no " << zId << " criado.\n";
 }
 
-// ----------------- Inserção em nó não cheio -------------------
+// ----------------- Insercao em no nao cheio -------------------
 void ArvoreMVias::insertNonFull(int nodeId,int chave){
     vector<int> nodeVals;
-    if(!readNode(nodeId,nodeVals)) { cerr<<"Erro: nó não lido no insertNonFull.\n"; return; }
+    if(!readNode(nodeId,nodeVals)) { cerr<<"Erro: no nao lido no insertNonFull.\n"; return; }
 
     int n = node_get_n(nodeVals);
     if(node_get_folha(nodeVals)){
@@ -247,13 +250,13 @@ void ArvoreMVias::insertNonFull(int nodeId,int chave){
 
 // ----------------- Busca -------------------
 Resultado ArvoreMVias::mSearch(int chave){
-    if(!readHeader()) { cerr<<"Erro: não conseguiu ler header.\n"; return {-1,-1,false}; }
+    if(!readHeader()) { cerr<<"Erro: nao conseguiu ler header.\n"; return {-1,-1,false}; }
 
     int p=raiz;
     int last_q=-1;
     while(p!=0){
         vector<int> vals;
-        if(!readNode(p,vals)) { cerr<<"Erro: nó "<<p<<" não lido na busca.\n"; return {-1,-1,false}; }
+        if(!readNode(p,vals)) { cerr<<"Erro: no "<<p<<" nao lido na busca.\n"; return {-1,-1,false}; }
         leituraDisco++;
 
         int n=node_get_n(vals);
@@ -261,26 +264,26 @@ Resultado ArvoreMVias::mSearch(int chave){
         while(i<n && chave>node_get_chave(vals,i)) i++;
 
         if(i<n && chave==node_get_chave(vals,i)){
-            cout << "Chave " << chave << " encontrada no nó " << p << ", posição " << i+1 << "\n";
+            cout << "Chave " << chave << " encontrada no no " << p << ", posicao " << i+1 << "\n";
             return {p,i+1,true};
         }
 
         last_q=p;
         p=node_get_filho(vals,i);
     }
-    cout << "Chave " << chave << " não encontrada.\n";
+    cout << "Chave " << chave << " nao encontrada.\n";
     if(last_q==-1) last_q=0;
     return {last_q,0,false};
 }
 
-// ----------------- Inserção principal -------------------
+// ----------------- Insercao principal -------------------
 void ArvoreMVias::insertB(int chave,const string& dadosElemento){
     ofstream foutDados(arquivoDados,ios::app);
-    if(!foutDados) { cerr<<"Erro: não conseguiu abrir arquivo de dados.\n"; return; }
+    if(!foutDados) { cerr<<"Erro: nao conseguiu abrir arquivo de dados.\n"; return; }
 
     Resultado r = mSearch(chave);
     if(r.encontrou){
-        cout<<"Aviso: chave "<<chave<<" já existe. Dados adicionados somente ao arquivo.\n";
+        cout<<"Aviso: chave "<<chave<<" ja existe. Dados adicionados somente ao arquivo.\n";
         foutDados<<chave<<" "<<dadosElemento<<endl;
         foutDados.close();
         return;
@@ -307,12 +310,12 @@ void ArvoreMVias::insertB(int chave,const string& dadosElemento){
     }
 
     insertNonFull(raiz,chave);
-    cout << "Inserção da chave " << chave << " realizada com sucesso.\n";
+    cout << "Insercao da chave " << chave << " realizada com sucesso.\n";
 }
 
-// ----------------- Impressão -------------------
+// ----------------- Impressao -------------------
 void ArvoreMVias::print(){
-    if(!readHeader()){ cout<<"Arquivo binario não encontrado.\n"; return; }
+    if(!readHeader()){ cout<<"Arquivo binario nao encontrado.\n"; return; }
 
     cout << "T = 1, m = " << M << "\n--------------------------------------------\n";
     cout << "No n,A[0],(K[1],A[1]),...(K[n],A[n])\n--------------------------------------------\n";
@@ -337,17 +340,17 @@ void ArvoreMVias::imprimirIndice(){
 
 void ArvoreMVias::imprimirArquivoPrincipal(){
     ifstream fin(arquivoDados);
-    if(!fin){ cout<<"Arquivo de dados vazio ou não existe.\n"; return; }
+    if(!fin){ cout<<"Arquivo de dados vazio ou nao existe.\n"; return; }
 
     string linha;
-    cout<<"Conteúdo do arquivo principal ("<<arquivoDados<<"):\n";
+    cout<<"Conteudo do arquivo principal ("<<arquivoDados<<"):\n";
     while(getline(fin,linha)) cout<<linha<<endl;
     fin.close();
 }
 
 void ArvoreMVias::imprimirArquivoPrincipal(int chave){
     ifstream fin(arquivoDados);
-    if(!fin){ cout<<"Arquivo de dados vazio ou não existe.\n"; return; }
+    if(!fin){ cout<<"Arquivo de dados vazio ou nao existe.\n"; return; }
 
     string linha;
     bool found=false;
@@ -361,7 +364,7 @@ void ArvoreMVias::imprimirArquivoPrincipal(int chave){
     fin.close();
 }
 
-// ----------------- Inicialização -------------------
+// ----------------- Inicializacao -------------------
 void ArvoreMVias::geradorBinario(){
     if(!readHeader()){
         raiz=1; nextNodeId=1; writeHeader(); createNode(true);
