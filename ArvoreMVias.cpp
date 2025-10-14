@@ -19,8 +19,8 @@ ArvoreMVias::ArvoreMVias(const string& txt, const string& bin, const string& dad
     M = ordem;
     raiz = 1;
     nextNodeId = 1;
-    leituraDisco = 0;
-    escritaDisco = 0;
+    // leituraDisco = 0;
+    // escritaDisco = 0;
 }
 
 // [n (1 int), folha (1 int), chaves (M-1 ints), filhos (M ints)]
@@ -94,7 +94,7 @@ void ArvoreMVias::writeNode(int id, const vector<int>& vals) {
         fout.write((char*)&v, sizeof(int));
     }
     fout.close();
-    escritaDisco++; // Incrementa o contador de acesso a disco (escrita)
+    // escritaDisco++; // Incrementa o contador de acesso a disco (escrita)
 }
 
 // Simula a leitura de um bloco no disco (incrementa leituraDisco)
@@ -123,7 +123,7 @@ bool ArvoreMVias::readNode(int id, vector<int>& vals) {
         vals[i] = v;
     }
     fin.close();
-    leituraDisco++; // Incrementa o contador de acesso a disco (leitura)
+    // leituraDisco++; // Incrementa o contador de acesso a disco (leitura)
     return true;
 }
 
@@ -167,8 +167,8 @@ void ArvoreMVias::geradorBinario() {
 
 void ArvoreMVias::print() {
     // Reseta contadores antes da impressao para isolar a operacao
-    leituraDisco = 0;
-    escritaDisco = 0;
+    // leituraDisco = 0;
+    // escritaDisco = 0;
 
     if (!readHeader()) {
         cout << "Arquivo binario nao encontrado ou corrompido.\n";
@@ -199,9 +199,8 @@ void ArvoreMVias::print() {
 
 // Requisito C: mSearch - Retorna o triplo (ID No, Posicao, Encontrado)
 Resultado ArvoreMVias::mSearch(int chave) {
-    // Reseta contadores antes da busca para isolar a operacao
-    leituraDisco = 0;
-    escritaDisco = 0;
+    // leituraDisco = 0;
+    // escritaDisco = 0;
 
     if (!readHeader()) {
         cerr << "Erro ao abrir " << arquivoBin << " (header).\n";
@@ -209,31 +208,37 @@ Resultado ArvoreMVias::mSearch(int chave) {
     }
 
     int p = raiz;
-    int last_q = 0; // Se a raiz for vazia, o ultimo no 'visitado' sera 0
     while (p != 0) {
         vector<int> vals;
         if (!readNode(p, vals)) {
             cerr << "Erro ao ler no " << p << " do arquivo.\n";
             return {-1, -1, false};
         }
+
         int n = node_get_n(vals);
         int i = 0;
 
-        // Encontra a posicao da chave no no
-        while (i < n && chave > node_get_chave(vals, i)) i++;
+        // Encontra a posição de inserção (ou a chave, se existir)
+        while (i < n && chave > node_get_chave(vals, i))
+            i++;
 
         if (i < n && chave == node_get_chave(vals, i)) {
-            // Chave encontrada! Retorna o ID do no e a posicao (1-based)
+            // Encontrou a chave
             return {p, i + 1, true};
-        } else {
-            // Desce para o filho A[i]
-            last_q = p;
-            p = node_get_filho(vals, i);
         }
+
+        // Desce para o filho correspondente
+        int filho = node_get_filho(vals, i);
+        if (filho == 0) {
+            // Chegou em folha — chave deve ser inserida aqui na posição i
+            return {p, i + 1, false};
+        }
+
+        p = filho;
     }
 
-    // Chave nao encontrada. Retorna o ultimo no folha visitado e posicao 0
-    return {last_q, 0, false};
+    // Árvores vazias ou erro inesperado
+    return {-1, -1, false};
 }
 
 void ArvoreMVias::splitChild(int parentId, int childIndex, int childId) {
@@ -362,8 +367,8 @@ void ArvoreMVias::insertNonFull(int nodeId, int chave) {
 // Requisito D: InsertB
 void ArvoreMVias::insertB(int chave, const string& dadosElemento) {
     // Zera contadores para contar apenas a insercao
-    leituraDisco = 0;
-    escritaDisco = 0;
+    // leituraDisco = 0;
+    // escritaDisco = 0;
 
     // 1. Verifica se a chave ja existe no indice (para evitar duplicidade no indice)
     // O mSearch e chamado com contadores resetados
@@ -381,7 +386,7 @@ void ArvoreMVias::insertB(int chave, const string& dadosElemento) {
     }
     foutDados << chave << " " << dadosElemento << endl;
     foutDados.close();
-    escritaDisco++; // Conta a escrita no arquivo de dados principal
+    // escritaDisco++; // Conta a escrita no arquivo de dados principal
 
     // 3. Insere na arvore B (arquivo bin)
     if (!readHeader()) {
@@ -420,9 +425,9 @@ void ArvoreMVias::insertB(int chave, const string& dadosElemento) {
 // Requisito A: Imprime o indice (e contadores)
 void ArvoreMVias::imprimirIndice() {
     print(); // Imprime o indice
-    cout << "\n--- Contadores de Acesso a Disco ---\n";
-    cout << "Numero de leituras de disco: " << leituraDisco << endl;
-    cout << "Numero de escritas de disco: " << escritaDisco << endl;
+    // cout << "\n--- Contadores de Acesso a Disco ---\n";
+    // cout << "Numero de leituras de disco: " << leituraDisco << endl;
+    // cout << "Numero de escritas de disco: " << escritaDisco << endl;
 }
 
 // Requisito B: Imprime todo o arquivo principal

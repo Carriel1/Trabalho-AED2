@@ -32,8 +32,8 @@ private:
     int nextNodeId; // próximo id disponível (1-based)
 
     // contadores de I/O
-    int leituraDisco;
-    int escritaDisco;
+    // int leituraDisco;
+    // int escritaDisco;
 
     // helper: numero de inteiros por nó no arquivo binario = 2 + (M-1) + M
     int nodeInts() const;
