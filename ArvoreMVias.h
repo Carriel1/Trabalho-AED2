@@ -3,7 +3,7 @@
 // Mateus Henrique Carriel   N° 15698362
 // Murilo Augusto Jorge   N° 15552251
 
-// Arquivo .h de definiçãoo da classe árvore de M-vias
+// Arquivo .h de definição da classe árvore de M-vias
 
 #ifndef ARVOREMVIAS_H
 #define ARVOREMVIAS_H
@@ -60,7 +60,7 @@ private:
     int createNode(bool folha);
 
     // operações clássicas de B-tree em disco
-    void splitChild(int parentId, int childIndex /* 0-based index in parent */, int childId);
+    void splitChild(int parentId, int childIndex, int childId);
     void insertNonFull(int nodeId, int chave);
 
 public:

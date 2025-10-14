@@ -3,7 +3,7 @@
 // Mateus Henrique Carriel   N° 15698362
 // Murilo Augusto Jorge   N° 15552251
 
-// Arquivo main do trabalho, rodando o mSearch
+// Arquivo main do trabalho, rodando o mSearch e insertB
 
 #include <iostream>
 #include <string>
