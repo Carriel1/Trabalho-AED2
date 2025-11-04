@@ -200,46 +200,829 @@ void ArvoreMVias::node_set_filho(vector<int>& vals, int idx, int filho) { vals[2
 
 // ====================================================================================================================
 
-//METODOS DE INSERCAO (INSERTB):
+// METODOS DE INSERCAO (INSERTB):
 
 // Cria e inicializa um novo Noh no Disco.
 int ArvoreMVias::createNode(bool folha) {
-    int id = nextNodeId++;
-    int ints = nodeInts();
-    vector<int> vals(ints, 0);
-    node_set_n(vals, 0);
-    node_set_folha(vals, folha);
-    // Inicializa filhos e chaves com 0
+
+    int id = nextNodeId++;          // Atribui o Proximo ID e Incrementa o Contador.
+    int ints = nodeInts();          // Obtem o Numero de Inteiros.
+    vector<int> vals(ints, 0);      // Inicializa o Vetor do Noh com Zeros.
+    node_set_n(vals, 0);            // Define o Noh com 0 Chaves.
+    node_set_folha(vals, folha);    // Define se o Noh eh Folha.
+
+    // Inicializa filhos e chaves com 0 (Feito pela Inicializacao do Vetor):
     for (int i = 0; i < M; ++i) node_set_filho(vals, i, 0);
     for (int i = 0; i < M - 1; ++i) node_set_chave(vals, i, 0);
-    writeNode(id, vals);
-    writeHeader(); // Atualiza nextNodeId no header
-    return id;
-}
 
+    writeNode(id, vals);    // Escreve o Noh Inicializado no Disco.
+    writeHeader();          // Atualiza nextNodeId no Header do Arquivo.
+
+    return id;      // Retorna ID do Noh Recem-Criado.
+
+} // Fim do createNode
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Divide o Noh quando um Noh Filho estah Cheio.
+void splitChild(int parentId, int childIndex, int childId){}    // Nao usado diretamente.
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Insercao Principal - lida com Split de Filho Cheio.
+void ArvoreMVias::insertNonFull(int nodeId, int chave) {
+    vector<int> nodeVals;                                       // Declara vetor para o noh.
+    readNode(nodeId, nodeVals);                                 // Leh o noh atual.
+
+    cout << "DEBUG insertNonFull: noh " << nodeId << ", folha=" << node_get_folha(nodeVals) // Log
+         << ", n=" << node_get_n(nodeVals) << ", chave=" << chave << endl;
+
+    // CASO 1: O noh eh folha (Insercao Direta)
+    if (node_get_folha(nodeVals)) {
+        int n = node_get_n(nodeVals);                           // Obtem n.
+        int pos = 0;                                            // Inicializa a posicao.
+
+        while (pos < n && node_get_chave(nodeVals, pos) < chave) { // Encontra a posicao de insercao.
+            pos++;
+        } // Fim do while
+
+        cout << "Inserindo na folha " << nodeId << " na posicao " << pos << endl; // Log
+
+        for (int i = n; i > pos; i--) {                         // Shift das chaves para a direita.
+            node_set_chave(nodeVals, i, node_get_chave(nodeVals, i - 1));
+        } // Fim do for
+
+        node_set_chave(nodeVals, pos, chave);                   // Insere a nova chave.
+        node_set_n(nodeVals, n + 1);                            // Incrementa n.
+        writeNode(nodeId, nodeVals);                            // Grava o noh.
+
+        cout << "Folha " << nodeId << " agora tem " << node_get_n(nodeVals) << " chaves: "; // Log
+        for (int i = 0; i < node_get_n(nodeVals); i++) {
+            cout << node_get_chave(nodeVals, i) << " ";
+        } // Fim do for
+        cout << endl;
+
+    } // Fim do if (folha)
+    // CASO 2: O noh eh interno (Descida ou Split)
+    else {
+        int n = node_get_n(nodeVals);                           // Obtem n.
+        int childIndex = 0;                                     // Inicializa o indice do filho.
+
+        while (childIndex < n && chave > node_get_chave(nodeVals, childIndex)) { // Encontra o ponteiro A[childIndex] para descer.
+            childIndex++;
+        } // Fim do while
+
+        int childId = node_get_filho(nodeVals, childIndex);     // Obtem ID do filho.
+        cout << "Descendo para filho " << childId << " (indice " << childIndex << ")" << endl; // Log
+
+        vector<int> childVals;                                  // Declara vetor.
+        readNode(childId, childVals);                           // Leh o noh filho.
+
+        // Se o filho estiver CHEIO (M-1 chaves), realiza o SPLIT ESPECIAL.
+        if (node_get_n(childVals) == M - 1) {
+            cout << "Filho " << childId << " estah cheio. Fazendo split especial..." << endl; // Log
+
+            vector<int> tempChildVals = childVals;              // Cria uma copia temporaria para simular a insercao de M chaves.
+            int temp_n = node_get_n(tempChildVals);             // Obtem n temporario.
+
+            int pos = 0;                                        // Encontra a posicao para a nova chave no noh temporario.
+            while (pos < temp_n && chave > node_get_chave(tempChildVals, pos)) {
+                pos++;
+            } // Fim do while
+
+            for (int i = temp_n; i > pos; i--) {                // Shift para a direita na copia temporaria.
+                node_set_chave(tempChildVals, i, node_get_chave(tempChildVals, i - 1));
+            } // Fim do for
+
+            node_set_chave(tempChildVals, pos, chave);          // Insere a chave temporariamente (noh agora tem M chaves).
+            node_set_n(tempChildVals, temp_n + 1);              // Incrementa n.
+
+            cout << "DEBUG: Noh temporario apos insercao de " << chave << ": "; // Log
+            for (int i = 0; i < node_get_n(tempChildVals); i++) {
+                cout << node_get_chave(tempChildVals, i) << " ";
+            } // Fim do for
+            cout << endl;
+
+            // --- LÓGICA DO SPLIT COM M CHAVES ---
+            int t = T;
+            int medianaIndex = t - 1;                           // A chave mediana a ser promovida estah em T-1.
+            int med = node_get_chave(tempChildVals, medianaIndex); // Obtem o valor da mediana.
+
+            cout << "Mediana index: " << medianaIndex << ", valor: " << med << endl; // Log
+
+            int zId = createNode(node_get_folha(tempChildVals)); // Cria o novo noh direito (zId).
+            vector<int> zVals;                                  // Declara vetor.
+            readNode(zId, zVals);                               // Leh o novo noh.
+
+            node_set_n(childVals, medianaIndex);                // O noh original (childVals) fica com as primeiras T-1 chaves.
+            for (int i = 0; i < medianaIndex; ++i) {            // Copia as chaves.
+                node_set_chave(childVals, i, node_get_chave(tempChildVals, i));
+            } // Fim do for
+            for (int i = medianaIndex; i < M - 1; ++i) {        // Zera chaves restantes no noh esquerdo.
+                node_set_chave(childVals, i, 0);
+            } // Fim do for
+
+            int chavesRestantes = (temp_n + 1) - medianaIndex - 1; // O novo noh (zVals) fica com as chaves APOS a mediana.
+            node_set_n(zVals, chavesRestantes);
+            for (int j = 0; j < chavesRestantes; ++j) {         // Copia as chaves para o novo noh.
+                node_set_chave(zVals, j, node_get_chave(tempChildVals, j + medianaIndex + 1));
+            } // Fim do for
+
+            if (!node_get_folha(tempChildVals)) {               // Move filhos correspondentes (se nao for folha).
+                for (int j = 0; j <= chavesRestantes; ++j) {
+                    node_set_filho(zVals, j, node_get_filho(tempChildVals, j + medianaIndex + 1));
+                } // Fim do for
+            } // Fim do if
+
+            cout << "Mediana a ser promovida: " << med << endl; // Log
+
+            // --- Insere a Mediana no Noh Pai (nodeVals) ---
+            int parent_n = node_get_n(nodeVals);                // Obtem n do pai.
+
+            for (int j = parent_n; j > childIndex; --j) {       // Shift de chaves no pai para a direita.
+                node_set_chave(nodeVals, j, node_get_chave(nodeVals, j - 1));
+            } // Fim do for
+            for (int j = parent_n + 1; j > childIndex + 1; --j) { // Shift de ponteiros no pai para a direita.
+                node_set_filho(nodeVals, j, node_get_filho(nodeVals, j - 1));
+            } // Fim do for
+
+            node_set_chave(nodeVals, childIndex, med);          // Insere a chave promovida (mediana).
+            node_set_filho(nodeVals, childIndex + 1, zId);      // Insere o ponteiro para o novo noh direito (zId).
+            node_set_n(nodeVals, parent_n + 1);                 // Incrementa o numero de chaves do pai.
+
+            writeNode(childId, childVals);                      // Grava o noh esquerdo.
+            writeNode(zId, zVals);                              // Grava o novo noh direito.
+            writeNode(nodeId, nodeVals);                        // Grava o noh pai.
+
+            cout << "Split especial concluido. Mediana " << med << " promovida." << endl; // Log de conclusao.
+
+        } // Fim do if (split)
+        else {
+            insertNonFull(childId, chave);                      // Filho nao estah cheio, insere normalmente (recursivamente).
+        } // Fim do else
+    } // Fim do else (noh interno)
+} // Fim de insertNonFull
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Insere Chave e Dados.
+void ArvoreMVias::insertB(int chave, const string& dadosElemento) {
+    // leituraDisco = 0; // Zera contadores (comentado)
+    // escritaDisco = 0; // Zera contadores (comentado)
+
+    Resultado r = mSearch(chave);                               // 1. Verifica se a chave jah existe no indice.
+    if (r.encontrou) {
+        cout << "Aviso: Chave " << chave << " jah existe no indice. Insercao cancelada.\n";
+        return;
+    } // Fim do if
+
+    ofstream foutDados(arquivoDados, ios::binary | ios::app);   // 2. Escreve no arquivo principal (cria o registro de dados).
+    if (!foutDados) {
+        cerr << "Erro ao abrir " << arquivoDados << " para escrita.\n";
+        return;
+    } // Fim do if
+
+    Registro novoReg;                                           // Preenche o novo registro.
+    novoReg.chave = chave;
+    size_t len = min(dadosElemento.length(), (size_t)MAX_DATA_SIZE - 1);
+    dadosElemento.copy(novoReg.dados, len);
+    novoReg.dados[len] = '\0';                                  // Terminador nulo
+    novoReg.deletado = false;                                   // Registro ativo
+
+    foutDados.write(reinterpret_cast<const char*>(&novoReg), Registro::getSize()); // Grava o registro.
+    foutDados.close();                                          // Fecha o arquivo de dados.
+
+    if (!readHeader()) {                                        // 3. Insere a chave no indice (Arvore B).
+        cerr << "Erro ao ler header antes de inserir.\n";
+        return;
+    } // Fim do if
+
+    vector<int> rootVals;                                       // Leh a raiz.
+    readNode(raiz, rootVals);
+
+    cout << "=== INICIANDO INSERcAO DA CHAVE " << chave << " ===" << endl; // Log
+    cout << "Raiz atual: " << raiz << ", n=" << node_get_n(rootVals) << endl; // Log
+
+    if (node_get_n(rootVals) == M - 1) {                        // Se a raiz estah cheia, realiza o split da raiz.
+        cout << "Raiz cheia. Criando nova raiz..." << endl;      // Log
+
+        int newRootId = createNode(false);                      // Cria a nova raiz (noh interno, 0 chaves).
+        vector<int> newRootVals;
+        readNode(newRootId, newRootVals);
+
+        node_set_filho(newRootVals, 0, raiz);                   // Faz a raiz antiga ser o primeiro filho da nova raiz.
+        writeNode(newRootId, newRootVals);
+
+        raiz = newRootId;                                       // Atualiza a variavel raiz.
+        writeHeader();                                          // Atualiza o cabecalho.
+
+        cout << "Nova raiz criada: " << raiz << endl;           // Log
+
+        insertNonFull(raiz, chave);                             // Chama insertNonFull.
+    } // Fim do if
+    else {
+        insertNonFull(raiz, chave);                             // Se a raiz nao estah cheia, insere diretamente.
+    } // Fim do else
+
+    cout << "Insercao da chave " << chave << " realizada com sucesso no indice e no arquivo principal.\n"; // Mensagem de sucesso.
+
+    cout << "=== ESTRUTURA FINAL APOS INSERcAO ===" << endl;    // Logs
+    print();                                                    // Mostra a estrutura final do indice.
+} // Fim de insertB
+
+// ====================================================================================================================
+
+// METODOS DE REMOCAO NO ARQUIVO DE DADOS:
+
+// Encontra e marca o Registro como Deletado (Delecao Logica).
+void ArvoreMVias::removeDataFromFile(int chave) {
+    markAsDeleted(chave);                                       // Chama a implementacao de delecao logica.
+} // Fim de removeDataFromFile
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Implementacao da Remocao Logica no arquivo principal.
+void ArvoreMVias::markAsDeleted(int chave) {
+    fstream file(arquivoDados, ios::binary | ios::in | ios::out); // Abre o arquivo para leitura, escrita e binario.
+    if (!file) {                                                // Verifica erro na abertura.
+        cerr << "Erro: Arquivo de dados binario nao existe ou nao pode ser aberto para marcacao de delecao.\n";
+        return;
+    } // Fim do if
+
+    Registro reg;                                               // Variaveis auxiliares.
+    bool marked = false;
+    streampos currentPos = 0;
+    size_t regSize = reg.getSize();
+
+    while (file.read(reinterpret_cast<char*>(&reg), regSize)) { // Itera sobre os registros.
+        if (reg.chave == chave && !reg.deletado) {              // Se a chave coincide e o registro estah ativo.
+            reg.deletado = true;                                // Marca como deletado.
+
+            file.seekp(currentPos);                             // Retorna ao inicio do registro.
+
+            file.write(reinterpret_cast<const char*>(&reg), regSize); // Grava APENAS o registro modificado.
+
+            marked = true;                                      // Marca como encontrado e sai do loop.
+            break;
+        } // Fim do if
+        currentPos = file.tellg();                              // Guarda a posicao de onde comecara a proxima leitura.
+    } // Fim do while
+
+    file.close();                                               // Fecha o arquivo.
+    if (marked) {                                               // Imprime o resultado.
+        cout << "Registro com chave " << chave << " marcado como deletado no arquivo principal (acesso direto a disco).\n";
+    } // Fim do if
+    else {
+        cerr << "Aviso: Registro ATIVO para a chave " << chave << " nao foi encontrado no arquivo principal.\n";
+    } // Fim do else
+    // escritaDisco++; // Conta o acesso de escrita
+} // Fim de markAsDeleted
+
+// ====================================================================================================================
+
+// Remove Chave K_idx e Ponteiro A_{idx+1} de um Noh na Memoria, deslocando os elementos.
+void ArvoreMVias::removeKeyAndPointer(vector<int>& vals, int idx) {
+    int n = node_get_n(vals);                                   // Obtem n.
+
+    for (int i = idx; i < n - 1; ++i) {                         // Desloca chaves K_{idx+1} para a posicao K_idx.
+        node_set_chave(vals, i, node_get_chave(vals, i + 1));
+    } // Fim do for
+    node_set_chave(vals, n - 1, 0);                             // Zera o ultimo espaco de chave.
+
+    for (int i = idx + 1; i <= n; ++i) {                        // Desloca filhos A_{idx+2} para a posicao A_{idx+1}.
+        node_set_filho(vals, i, node_get_filho(vals, i + 1));
+    } // Fim do for
+    node_set_filho(vals, n, 0);                                 // Zera o ultimo espaco de ponteiro.
+
+    node_set_n(vals, n - 1);                                    // Decrementa n.
+} // Fim de removeKeyAndPointer
+
+// Funcao Recursiva Principal para Remocao no Indice.
+void ArvoreMVias::deleteFromNode(int nodeId, int chave) {
+    cout << "DEBUG: M=" << M << ", T=" << T << ", T-1=" << T-1 << endl; // Log
+
+    vector<int> nodeVals;                                       // Leh o noh atual.
+    readNode(nodeId, nodeVals);
+
+    int n = node_get_n(nodeVals);                               // Variaveis auxiliares.
+    int i = 0;
+
+    while (i < n && chave > node_get_chave(nodeVals, i)) {      // Encontra a chave ou a posicao de descida.
+        i++;
+    } // Fim do while
+
+    // CASO 1: Chave encontrada neste noh (chave == K[i]).
+    if (i < n && chave == node_get_chave(nodeVals, i)) {
+        if (node_get_folha(nodeVals)) {
+            cout << "Removendo chave " << chave << " da folha " << nodeId << endl; // Log
+
+            removeFromLeaf(nodeVals, i);                        // Remove a chave do vetor em memoria.
+            writeNode(nodeId, nodeVals);                        // Grava o noh de volta.
+
+            int nAfter = node_get_n(nodeVals);                  // Verifica underflow na folha (se nao for a raiz).
+            cout << "Folha " << nodeId << ": nAfter=" << nAfter << ", T-1=" << T-1 << endl; // Log
+
+            if (nAfter < T - 1) {
+                cout << "=== UNDERFLOW DETECTADO na folha " << nodeId << " ===" << endl; // Log
+                int parentId = findParent(raiz, nodeId, 0);     // Busca o pai.
+                if (parentId != 0) {
+                    int childIndex = findChildIndex(parentId, nodeId); // Encontra o indice do filho.
+                    if (childIndex != -1) {
+                        cout << "Pai encontrado: " << parentId << ", childIndex: " << childIndex << endl; // Log
+                        cout << "Chamando fillChild..." << endl;
+                        fillChild(parentId, childIndex);        // Corrige o underflow (empresta ou funde).
+                    } // Fim do if
+                } // Fim do if
+            } // Fim do if
+        } // Fim do if
+        else {
+            cout << "Removendo chave " << chave << " do noh interno " << nodeId << endl; // Log
+            removeFromInternalNode(nodeId, i);                  // Remove em noh interno (substituicao ou merge).
+        } // Fim do else
+    } // Fim do if
+    // CASO 2: Chave nao estah neste noh - descer recursivamente por A[i].
+    else {
+        if (node_get_folha(nodeVals)) {                         // Se for folha, erro (chave nao encontrada).
+            cout << "Erro: Chave " << chave << " nao encontrada na folha " << nodeId << "\n";
+            return;
+        } // Fim do if
+
+        int childId = node_get_filho(nodeVals, i);              // Obtem o ID do filho para descer.
+        vector<int> childVals;
+        readNode(childId, childVals);
+
+        if (node_get_n(childVals) == T - 1) {                   // Pre-condicao: Filho tem o minimo, corrige o underflow antes de descer.
+            cout << "Filho " << childId << " tem minimo de chaves. Executando fillChild...\n"; // Log
+            fillChild(nodeId, i);                               // Emprestimo ou merge.
+            readNode(nodeId, nodeVals);                         // Re-leh o noh pai.
+            childId = node_get_filho(nodeVals, i);              // Recalcula o ID do filho (pode ter mudado).
+        } // Fim do if
+
+        if (childId != 0) {                                     // Continua a recursao.
+            cout << "Descendo para filho " << childId << " na busca pela chave " << chave << "\n";
+            deleteFromNode(childId, chave);
+        } // Fim do if
+    } // Fim do else
+} // Fim de deleteFromNode
+
+// Remove Chave de um Noh Folha na Memoria e atualiza 'n'.
+void ArvoreMVias::removeFromLeaf(vector<int>& vals, int idx) {
+    int n = node_get_n(vals);                                   // Obtem n.
+    cout << "removeFromLeaf: n=" << n << ", idx=" << idx << endl; // Log
+
+    for (int i = idx; i < n - 1; i++) {                         // Desloca chaves para a esquerda.
+        node_set_chave(vals, i, node_get_chave(vals, i + 1));
+    } // Fim do for
+    node_set_chave(vals, n - 1, 0);                             // Zera o ultimo espaco de chave.
+    node_set_n(vals, n - 1);                                    // Decrementa n.
+
+    cout << "removeFromLeaf: novo n=" << node_get_n(vals) << endl; // Log
+} // Fim de removeFromLeaf
+
+// Substitui a Chave por Predecessor/Sucessor ou faz Merge.
+void ArvoreMVias::removeFromInternalNode(int nodeId, int idx) {
+    vector<int> nodeVals;                                       // Leh o noh.
+    readNode(nodeId, nodeVals);
+
+    int chaveParaDeletar = node_get_chave(nodeVals, idx);       // Chave a ser deletada.
+
+    int leftChildId = node_get_filho(nodeVals, idx);            // IDs dos filhos.
+    int rightChildId = node_get_filho(nodeVals, idx + 1);
+
+    vector<int> leftVals, rightVals;                            // Leitura dos filhos.
+    readNode(leftChildId, leftVals);
+    readNode(rightChildId, rightVals);
+
+    int nLeft = node_get_n(leftVals);                           // Contadores dos filhos.
+    int nRight = node_get_n(rightVals);
+
+    // Caso 2A: Filho esquerdo tem pelo menos T chaves.
+    if (nLeft >= T) {
+        int predecessor = getPredecessor(leftChildId);          // Encontra o predecessor.
+        cout << "Caso 2A: Predecessor = " << predecessor << endl; // Log
+        node_set_chave(nodeVals, idx, predecessor);             // Substitui a chave K_idx pela chave predecessor.
+        writeNode(nodeId, nodeVals);
+        deleteFromNode(leftChildId, predecessor);               // Deleta recursivamente o predecessor no noh esquerdo.
+    } // Fim do if
+    // Caso 2B: Filho direito tem pelo menos T chaves.
+    else if (nRight >= T) {
+        int successor = getSuccessor(rightChildId);             // Encontra o sucessor.
+        cout << "Caso 2B: Successor = " << successor << endl; // Log
+        node_set_chave(nodeVals, idx, successor);               // Substitui a chave K_idx pela chave sucessor.
+        writeNode(nodeId, nodeVals);
+        deleteFromNode(rightChildId, successor);                // Deleta recursivamente o sucessor no noh direito.
+    } // Fim do else if
+    // Caso 2C: Ambos os filhos tem T-1 chaves (minimo).
+    else {
+        cout << "Caso 2C: Fazendo merge dos filhos..." << endl; // Log
+        mergeNodes(nodeId, idx);                                // Realiza o merge (juncao).
+
+        if (readNode(nodeId, nodeVals)) {                       // Re-leh o noh pai.
+            int mergedChildId = node_get_filho(nodeVals, idx);
+            if (mergedChildId != 0) {
+                cout << "Deletando recursivamente do filho merged " << mergedChildId << endl; // Log
+                deleteFromNode(mergedChildId, chaveParaDeletar); // Deleta a chave no noh fundido.
+            } // Fim do if
+        } // Fim do if
+    } // Fim do else
+} // Fim de removeFromInternalNode
+
+// Faz o Filho em Underflow (T-1) receber uma Chave (Empresta ou Funde).
+void ArvoreMVias::fillChild(int parentId, int idx) {
+    vector<int> parentVals;                                     // Leh o noh pai.
+    readNode(parentId, parentVals);
+
+    int childId = node_get_filho(parentVals, idx);              // Obtem o ID do filho.
+    if (childId == 0) return;
+
+    vector<int> childVals;                                      // Leitura do noh filho.
+    readNode(childId, childVals);
+
+    cout << "fillChild: parent=" << parentId << ", idx=" << idx
+         << ", child=" << childId << ", child.n=" << node_get_n(childVals) << endl; // Log
+
+    // 1. Tenta emprestar do irmao esquerdo (se existir e tiver chaves suficientes >= T).
+    if (idx > 0) {
+        int leftSiblingId = node_get_filho(parentVals, idx - 1);
+        vector<int> leftVals;
+        readNode(leftSiblingId, leftVals);
+
+        if (node_get_n(leftVals) >= T) {
+            cout << "Emprestando do irmao esquerdo " << leftSiblingId << endl; // Log
+            borrowFromLeft(parentId, idx);                      // Realiza o emprestimo.
+            return;                                             // Sai apos o emprestimo.
+        } // Fim do if
+    } // Fim do if
+
+    // 2. Tenta emprestar do irmao direito (se existir e tiver chaves suficientes >= T).
+    if (idx < node_get_n(parentVals)) {
+        int rightSiblingId = node_get_filho(parentVals, idx + 1);
+        vector<int> rightVals;
+        readNode(rightSiblingId, rightVals);
+
+        if (node_get_n(rightVals) >= T) {
+            cout << "Emprestando do irmao direito " << rightSiblingId << endl; // Log
+            borrowFromRight(parentId, idx);                     // Realiza o emprestimo.
+            return;                                             // Sai apos o emprestimo.
+        } // Fim do if
+    } // Fim do if
+
+    // 3. Se nao pode emprestar, realiza a fusao (merge).
+    cout << "Nao pode emprestar. Fazendo merge..." << endl;      // Log
+    if (idx > 0) {
+        mergeNodes(parentId, idx - 1);                          // Funde com o irmao esquerdo.
+    } // Fim do if
+    else if (idx < node_get_n(parentVals)) {
+        mergeNodes(parentId, idx);                              // Funde com o irmao direito.
+    } // Fim do else if
+    else {
+        cout << "ERRO: Nao foi possivel fazer merge - indices invalidos" << endl; // Erro
+    } // Fim do else
+} // Fim de fillChild
+
+// Funde 2 Nohs Irmaos e a Chave do Pai entre eles.
+void ArvoreMVias::mergeNodes(int parentId, int idx) {
+    vector<int> parentVals;                                     // Leh o noh pai.
+    readNode(parentId, parentVals);
+
+    int leftId = node_get_filho(parentVals, idx);               // Obtem IDs dos nos a serem fundidos.
+    int rightId = node_get_filho(parentVals, idx + 1);
+
+    vector<int> leftVals, rightVals;                            // Leitura dos nos a serem fundidos.
+    readNode(leftId, leftVals);
+    readNode(rightId, rightVals);
+
+    int nLeft = node_get_n(leftVals);                           // Contadores.
+    int nRight = node_get_n(rightVals);
+    int parentKey = node_get_chave(parentVals, idx);            // Chave do pai que desce.
+
+    cout << "DEBUG MERGE: left=" << leftId << "(" << nLeft << "), right=" << rightId
+         << "(" << nRight << "), parentKey=" << parentKey << endl; // Log
+
+    if (nLeft + nRight + 1 > M - 1) {                           // Verifica se a fusao nao excede a capacidade.
+        cerr << "ERRO: Merge excederia capacidade maxima do noh!\n";
+        return;
+    } // Fim do if
+
+    node_set_chave(leftVals, nLeft, parentKey);                 // 1. Move a chave do pai para o noh esquerdo.
+
+    for (int i = 0; i < nRight; i++) {                          // 2. Copia chaves do filho direito para o esquerdo.
+        node_set_chave(leftVals, nLeft + 1 + i, node_get_chave(rightVals, i));
+    } // Fim do for
+
+    if (!node_get_folha(leftVals)) {                            // 3. Copia filhos (se nao forem folhas).
+        for (int i = 0; i <= nRight; i++) {
+            node_set_filho(leftVals, nLeft + 1 + i, node_get_filho(rightVals, i));
+        } // Fim do for
+    } // Fim do if
+
+    node_set_n(leftVals, nLeft + nRight + 1);                   // 4. Atualiza o contador de chaves do noh fundido.
+
+    removeKeyAndPointer(parentVals, idx);                       // 5. Remove chave e ponteiro do noh pai.
+
+    cout << "DEBUG: Apos merge - left.n=" << node_get_n(leftVals)
+         << ", parent.n=" << node_get_n(parentVals) << endl; // Log
+
+    writeNode(leftId, leftVals);                                // 6. Atualiza nos.
+    writeNode(parentId, parentVals);
+
+    deleteNode(rightId);                                        // 7. Remove noh direito (limpeza).
+
+    // 8. VERIFICAcAO CRITICA: Se o pai eh a raiz e ficou vazio.
+    if (parentId == raiz && node_get_n(parentVals) == 0) {
+        cout << "Raiz " << parentId << " ficou vazia apos merge. Promovendo filho " << leftId << " como nova raiz.\n"; // Log
+        raiz = leftId;                                          // Define a nova raiz.
+        writeHeader();                                          // Atualiza o cabecalho.
+        deleteNode(parentId);                                   // Limpa a antiga raiz.
+    } // Fim do if
+    // 9. Se nao eh raiz e ficou com underflow.
+    else if (parentId != raiz && node_get_n(parentVals) < T - 1) {
+        cout << "Pai " << parentId << " com underflow. Buscando avo...\n"; // Log
+        int grandParentId = findParent(raiz, parentId, 0);      // Busca o avo.
+        if (grandParentId != 0) {
+            int parentIndex = findChildIndex(grandParentId, parentId); // Encontra o indice do pai no avo.
+            if (parentIndex != -1) {
+                cout << "Chamando fillChild no avo " << grandParentId << " para indice " << parentIndex << endl; // Log
+                fillChild(grandParentId, parentIndex);          // Propaga a correcao de underflow.
+            } // Fim do if
+        } // Fim do if
+    } // Fim do else if
+} // Fim de mergeNodes
+
+// Encontra a MAIOR Chave na Subarvore a ESQUERDA (predecessor).
+int ArvoreMVias::getPredecessor(int nodeId) {
+    vector<int> vals;                                           // Leh o noh inicial.
+    readNode(nodeId, vals);
+
+    while (!node_get_folha(vals)) {                             // Desce sempre pelo ponteiro mais a direita (A_n) ate chegar em uma folha.
+        int lastChild = node_get_filho(vals, node_get_n(vals));
+        readNode(lastChild, vals);                              // Leh o noh filho.
+    } // Fim do while
+
+    return node_get_chave(vals, node_get_n(vals) - 1);          // Retorna a ultima chave da folha.
+} // Fim de getPredecessor
+
+// Encontra a MENOR Chave na Subarvore a DIREITA (sucessor).
+int ArvoreMVias::getSuccessor(int nodeId) {
+    vector<int> vals;                                           // Leh o noh inicial.
+    readNode(nodeId, vals);
+
+    while (!node_get_folha(vals)) {                             // Desce sempre pelo ponteiro mais a esquerda (A_0) ate chegar em uma folha.
+        int firstChild = node_get_filho(vals, 0);
+        readNode(firstChild, vals);                             // Leh o noh filho.
+    } // Fim do while
+
+    return node_get_chave(vals, 0);                             // Retorna a primeira chave da folha.
+} // Fim de getSuccessor
+
+// Move Chave do Irmao ESQUERDO para o Noh em Underflow.
+void ArvoreMVias::borrowFromLeft(int parentId, int childIndex) {
+    vector<int> parentVals, leftVals, childVals;                // Declaracao de vetores para os tres nos.
+    readNode(parentId, parentVals);
+
+    int childId = node_get_filho(parentVals, childIndex);       // Obtem IDs.
+    int leftId = node_get_filho(parentVals, childIndex - 1);
+
+    readNode(childId, childVals);                               // Leitura dos nos.
+    readNode(leftId, leftVals);
+
+    int nChild = node_get_n(childVals);                         // Contadores.
+    int nLeft = node_get_n(leftVals);
+
+    for (int i = nChild; i > 0; --i) {                          // 1. Shift de chaves e filhos do noh filho para a direita (abre K_0 e A_0).
+        node_set_chave(childVals, i, node_get_chave(childVals, i - 1));
+    } // Fim do for
+    if (!node_get_folha(childVals)) {
+        for (int i = nChild + 1; i > 0; --i) {
+            node_set_filho(childVals, i, node_get_filho(childVals, i - 1));
+        } // Fim do for
+    } // Fim do if
+
+    node_set_chave(childVals, 0, node_get_chave(parentVals, childIndex - 1)); // 2. Move K_{idx-1} (chave do pai) para child[0].
+
+    if (!node_get_folha(childVals))                             // 3. Move A_{nLeft} (ultimo filho do irmao) para child[0] (se nao for folha).
+        node_set_filho(childVals, 0, node_get_filho(leftVals, nLeft));
+
+    node_set_chave(parentVals, childIndex - 1, node_get_chave(leftVals, nLeft - 1)); // 4. Move K_{nLeft-1} (ultima chave do irmao) para parent[idx-1].
+
+    node_set_n(childVals, nChild + 1);                          // 5. Atualiza contadores.
+    node_set_n(leftVals, nLeft - 1);
+
+    writeNode(parentId, parentVals);                            // 6. Grava os tres nos.
+    writeNode(childId, childVals);
+    writeNode(leftId, leftVals);
+} // Fim de borrowFromLeft
+
+// Move Chave do Irmao DIREITO para o Noh em Underflow.
+void ArvoreMVias::borrowFromRight(int parentId, int childIndex) {
+    vector<int> parentVals, rightVals, childVals;                // Declaracao de vetores para os tres nos.
+    readNode(parentId, parentVals);
+
+    int childId = node_get_filho(parentVals, childIndex);       // Obtem IDs.
+    int rightId = node_get_filho(parentVals, childIndex + 1);
+
+    readNode(childId, childVals);                               // Leitura dos nos.
+    readNode(rightId, rightVals);
+
+    int nChild = node_get_n(childVals);                         // Contadores.
+    int nRight = node_get_n(rightVals);
+
+    node_set_chave(childVals, nChild, node_get_chave(parentVals, childIndex)); // 1. Move K_{idx} (chave do pai) para child[nChild].
+
+    if (!node_get_folha(childVals))                             // 2. Move A_0 (primeiro filho do irmao) para child[nChild + 1] (se nao for folha).
+        node_set_filho(childVals, nChild + 1, node_get_filho(rightVals, 0));
+
+    node_set_chave(parentVals, childIndex, node_get_chave(rightVals, 0)); // 3. Move K_0 (primeira chave do irmao) para parent[idx].
+
+    for (int i = 0; i < nRight - 1; ++i) {                      // 4. Shift de chaves e filhos do irmao direito para a esquerda (remove K_0 e A_0).
+        node_set_chave(rightVals, i, node_get_chave(rightVals, i + 1));
+    } // Fim do for
+    for (int i = 0; i < nRight; ++i) {
+        node_set_filho(rightVals, i, node_get_filho(rightVals, i + 1));
+    } // Fim do for
+
+    node_set_chave(rightVals, nRight - 1, 0);                   // 5. Limpa os ultimos espacos e atualiza contadores.
+    node_set_filho(rightVals, nRight, 0);
+    node_set_n(childVals, nChild + 1);
+    node_set_n(rightVals, nRight - 1);
+
+    writeNode(parentId, parentVals);                            // 6. Grava os tres nos.
+    writeNode(childId, childVals);
+    writeNode(rightId, rightVals);
+} // Fim de borrowFromRight
+
+// Limpa o conteudo de um Noh no Disco.
+void ArvoreMVias::deleteNode(int nodeId) {
+    vector<int> empty(nodeInts(), 0);                           // Cria um vetor de zeros do tamanho de um noh.
+    if (empty.size() >= 2) empty[1] = 1;                        // opcional: manter folha = 1 (para debug)
+    writeNode(nodeId, empty);                                   // Escreve o noh vazio.
+    cout << "[DIAG] deleteNode: limpo noh " << nodeId << endl;   // Log
+} // Fim de deleteNode
+
+// Busca recursivamente o Pai de um Noh.
+int ArvoreMVias::findParent(int currentNode, int targetId, int parentId) {
+    cout << "findParent: current=" << currentNode << ", target=" << targetId << ", parent=" << parentId << endl; // Log
+
+    if (currentNode == targetId) {                              // Caso base 1: encontrou o noh target, retorna o pai.
+        cout << "Encontrado! Pai eh: " << parentId << endl;
+        return parentId;
+    } // Fim do if
+    if (currentNode == 0) return 0;                             // Caso base 2: ponteiro nulo (fim da busca).
+
+    vector<int> vals;                                           // Leitura do noh atual.
+    if (!readNode(currentNode, vals)) return 0;
+
+    if (node_get_folha(vals)) return 0;                         // Se for folha, nao tem mais filhos para buscar.
+
+    int n = node_get_n(vals);                                   // Itera sobre todos os filhos.
+    cout << "Buscando nos " << n+1 << " filhos do noh " << currentNode << endl; // Log
+
+    for (int i = 0; i <= n; i++) {
+        int childId = node_get_filho(vals, i);                  // Obtem o ID do filho.
+        cout << "Filho[" << i << "] = " << childId << endl;     // Log
+        if (childId == targetId) {                              // Verifica se o filho eh o target.
+            cout << "Encontrado pai direto: " << currentNode << " para filho " << targetId << endl; // Log
+            return currentNode;
+        } // Fim do if
+        if (childId != 0) {                                     // Chamada recursiva para o filho.
+            int result = findParent(childId, targetId, currentNode);
+            if (result != 0) return result;
+        } // Fim do if
+    } // Fim do for
+    return 0;                                                   // Retorna 0 se o pai nao for encontrado.
+} // Fim de findParent
+
+// Encontra a Posicao (indice) do Ponteiro para o Filho.
+int ArvoreMVias::findChildIndex(int parentId, int childId) {
+    cout << "findChildIndex: parent=" << parentId << ", child=" << childId << endl; // Log
+
+    vector<int> parentVals;                                     // Leh o noh pai.
+    if (!readNode(parentId, parentVals)) return -1;
+
+    int n = node_get_n(parentVals);                             // Itera sobre todos os ponteiros do pai.
+    cout << "Procurando em " << n+1 << " filhos do pai " << parentId << endl; // Log
+
+    for (int i = 0; i <= n; i++) {
+        int currentChild = node_get_filho(parentVals, i);       // Obtem o ID do filho.
+        cout << "Filho[" << i << "] = " << currentChild << endl; // Log
+        if (currentChild == childId) {                          // Se o ID coincidir.
+            cout << "Encontrado no indice: " << i << endl;      // Log
+            return i;                                           // Retorna o indice.
+        } // Fim do if
+    } // Fim do for
+    cout << "Filho nao encontrado!" << endl;                     // Log
+    return -1;                                                  // Se nao encontrar.
+} // Fim de findChildIndex
+
+// Remove Chave do Indice e Marca Dados como Deletados.
+void ArvoreMVias::deleteB(int chave) {
+    if (!readHeader()) {                                        // Tenta ler o cabecalho.
+        cerr << "Erro ao ler header antes da delecao.\n";
+        return;
+    } // Fim do if
+
+    Resultado r = mSearch(chave);                               // 1. Verifica se a chave existe (pre-condicao).
+    if (!r.encontrou) {
+        cout << "Aviso: Chave " << chave << " nao existe no indice. Delecao cancelada.\n";
+        return;
+    } // Fim do if
+
+    cout << "=== INICIANDO DELEcAO da chave " << chave << " ===" << endl; // Logs
+    cout << "Encontrada no noh " << r.indice_no << ", posicao " << r.posicao << "\n";
+
+    deleteFromNode(raiz, chave);                                // 2. Chama a funcao recursiva de delecao no indice.
+
+    vector<int> rootVals;                                       // 3. Pos-remocao: verifica se a raiz ficou vazia.
+    if (readNode(raiz, rootVals)) {
+        if (node_get_n(rootVals) == 0 && !node_get_folha(rootVals)) {
+            int newRootId = node_get_filho(rootVals, 0);        // Promove o unico filho (A_0) para ser a nova raiz.
+            cout << "Raiz " << raiz << " ficou vazia. Substituindo por filho " << newRootId << "\n";
+            deleteNode(raiz);                                   // Limpa o noh da raiz antiga.
+            raiz = newRootId;                                   // Define a nova raiz.
+            writeHeader();                                      // Atualiza o cabecalho.
+        } // Fim do if
+    } // Fim do if
+
+    removeDataFromFile(chave);                                  // 4. Marca o registro no arquivo de dados como deletado.
+    cout << "Delecao da chave " << chave << " concluida.\n";     // Logs
+    cout << "=== ESTRUTURA FINAL ===" << endl;
+    print();                                                    // Imprime a estrutura final.
+} // Fim de deleteB
+
+Resultado ArvoreMVias::mSearch(int chave) {
+    // leituraDisco = 0; // Zera contadores (comentado)
+    // escritaDisco = 0; // Zera contadores (comentado)
+
+    if (!readHeader()) {                                        // Tenta ler o cabecalho.
+        cerr << "Erro ao abrir " << arquivoBin << " (header).\n";
+        return {-1, -1, false};
+    } // Fim do if
+
+    int p = raiz;                                               // Inicia a busca na raiz.
+    while (p != 0) {                                            // Loop de descida.
+        vector<int> vals;                                       // Declara e leh o noh atual.
+        if (!readNode(p, vals)) {
+            cerr << "Erro ao ler noh " << p << " do arquivo.\n";
+            return {-1, -1, false};
+        } // Fim do if
+
+        int n = node_get_n(vals);                               // Obtem n.
+        int i = 0;
+
+        while (i < n && chave > node_get_chave(vals, i))        // Encontra a posicao 'i' tal que K[i] >= chave, ou i=n.
+            i++;
+
+        if (i < n && chave == node_get_chave(vals, i)) {        // Se chave == K[i], encontrou.
+            return {p, i + 1, true};                            // Retorna ID do noh e posicao (1-based).
+        } // Fim do if
+
+        int filho = node_get_filho(vals, i);                    // Se nao encontrou, desce para o filho A[i].
+        if (filho == 0) {                                       // Se A[i] for nulo, chegou em uma folha.
+            return {p, i + 1, false};                           // Chave nao encontrada. Retorna noh e posicao de insercao.
+        } // Fim do if
+
+        p = filho;                                              // Continua a busca no noh filho.
+    } // Fim do while
+
+    return {-1, -1, false};                                     // Retorno para arvores vazias ou erro inesperado.
+} // Fim de mSearch
+
+// METODOS DE GERADOR DE ARQUIVO BINARIO E IMPRESSOES:
+
+// Inicializa ou Carrega a Estrutura do Indice Binario.
 void ArvoreMVias::geradorBinario() {
-    // Tenta ler o header; se falhar, inicializa o arquivo
+    // Tenta ler o header; se falhar, inicializa o arquivo.
     bool ok = readHeader();
+    // Se a leitura falhar (primeira execução ou incompatibilidade de M).
     if (!ok) {
+        // Reinicializa o estado da árvore.
         raiz = 1;
         nextNodeId = 1;
+        // Grava o novo header.
         writeHeader();
-        createNode(true); // Cria raiz (id 1) como folha
+        // Cria a raiz (ID 1) como folha e a grava no disco.
+        createNode(true);
+        // Imprime mensagem de inicialização.
         cout << "Arquivo binario de indice inicializado com raiz vazia.\n";
     } else {
+        // Imprime mensagem se o arquivo existente foi lido.
         cout << "Arquivo binario existente lido. Raiz ID=" << raiz << " Proximo ID=" << nextNodeId << "\n";
     }
-}
+} // Fim de geradorBinario
 
+// Imprime o Conteudo de Todos os Nohs do Indice.
 void ArvoreMVias::print() {
-    // Reseta contadores antes da impressao para isolar a operacao
+    // Reseta contadores (comentado)
     // leituraDisco = 0;
     // escritaDisco = 0;
 
+    // Tenta ler o cabeçalho.
     if (!readHeader()) {
+        // Imprime erro se falhar.
         cout << "Arquivo binario nao encontrado ou corrompido.\n";
         return;
     }
+    // Imprime informações do cabeçalho da visualização.
     cout << "\n--- Conteudo da Arvore B (Indice) ---\n";
     cout << "Ordem (M): " << M << ", Grau Minimo (T): " << (M + 1) / 2 << endl;
     cout << "Raiz ID: " << raiz << endl;
@@ -248,919 +1031,97 @@ void ArvoreMVias::print() {
     cout << "ID n | A[0] | (K[0],A[1]),...,(K[n-1],A[n])\n";
     cout << "------------------------------------------------------------------\n";
 
+    // Itera sobre todos os IDs de nós que foram alocados.
     for (int id = 1; id < nextNodeId; ++id) {
+        // Declara vetor para o nó.
         vector<int> vals;
+        // Tenta ler o nó. Se falhar, pula (nó deletado/limpo).
         if (!readNode(id, vals)) continue;
+        // Obtém o número de chaves.
         int n = node_get_n(vals);
 
+        // Imprime ID, n e o primeiro ponteiro (A[0]).
         cout << setw(2) << id << " " << n << " | " << node_get_filho(vals, 0);
+        // Itera e imprime os pares (Chave K[i], Ponteiro A[i+1]).
         for (int i = 0; i < n; ++i) {
             cout << " | (" << setw(2) << node_get_chave(vals, i) << "," << node_get_filho(vals, i + 1) << ")";
         }
+        // Nova linha.
         cout << endl;
     }
 
+    // Imprime o rodapé.
     cout << "------------------------------------------------------------------\n";
-}
+} // Fim de print
 
-// Requisito C: mSearch - Retorna o triplo (ID No, Posicao, Encontrado)
-Resultado ArvoreMVias::mSearch(int chave) {
-    // leituraDisco = 0;
-    // escritaDisco = 0;
-
-    if (!readHeader()) {
-        cerr << "Erro ao abrir " << arquivoBin << " (header).\n";
-        return {-1, -1, false};
-    }
-
-    int p = raiz;
-    while (p != 0) {
-        vector<int> vals;
-        if (!readNode(p, vals)) {
-            cerr << "Erro ao ler no " << p << " do arquivo.\n";
-            return {-1, -1, false};
-        }
-
-        int n = node_get_n(vals);
-        int i = 0;
-
-        // Encontra a posição de inserção (ou a chave, se existir)
-        while (i < n && chave > node_get_chave(vals, i))
-            i++;
-
-        if (i < n && chave == node_get_chave(vals, i)) {
-            // Encontrou a chave
-            return {p, i + 1, true};
-        }
-
-        // Desce para o filho correspondente
-        int filho = node_get_filho(vals, i);
-        if (filho == 0) {
-            // Chegou em folha — chave deve ser inserida aqui na posição i
-            return {p, i + 1, false};
-        }
-
-        p = filho;
-    }
-
-    // Árvores vazias ou erro inesperado
-    return {-1, -1, false};
-}
-
-void ArvoreMVias::insertNonFull(int nodeId, int chave) {
-    vector<int> nodeVals;
-    readNode(nodeId, nodeVals);
-
-    cout << "DEBUG insertNonFull: nó " << nodeId << ", folha=" << node_get_folha(nodeVals)
-         << ", n=" << node_get_n(nodeVals) << ", chave=" << chave << endl;
-
-    if (node_get_folha(nodeVals)) {
-        // INSERÇÃO DIRETA EM FOLHA
-        int n = node_get_n(nodeVals);
-        int pos = 0;
-
-        // Encontra posição de inserção
-        while (pos < n && node_get_chave(nodeVals, pos) < chave) {
-            pos++;
-        }
-
-        cout << "Inserindo na folha " << nodeId << " na posição " << pos << endl;
-
-        // Shift para direita
-        for (int i = n; i > pos; i--) {
-            node_set_chave(nodeVals, i, node_get_chave(nodeVals, i - 1));
-        }
-
-        // Insere
-        node_set_chave(nodeVals, pos, chave);
-        node_set_n(nodeVals, n + 1);
-        writeNode(nodeId, nodeVals);
-
-        cout << "Folha " << nodeId << " agora tem " << node_get_n(nodeVals) << " chaves: ";
-        for (int i = 0; i < node_get_n(nodeVals); i++) {
-            cout << node_get_chave(nodeVals, i) << " ";
-        }
-        cout << endl;
-
-    } else {
-        // NÓ INTERNO - ENCONTRA FILHO
-        int n = node_get_n(nodeVals);
-        int childIndex = 0;
-
-        while (childIndex < n && chave > node_get_chave(nodeVals, childIndex)) {
-            childIndex++;
-        }
-
-        int childId = node_get_filho(nodeVals, childIndex);
-        cout << "Descendo para filho " << childId << " (índice " << childIndex << ")" << endl;
-
-        vector<int> childVals;
-        readNode(childId, childVals);
-
-        // *** CORREÇÃO: VERIFICAR SE PRECISAMOS INSERIR PRIMEIRO E DEPOIS SPLIT ***
-        // SE FILHO ESTÁ CHEIO, FAZ SPLIT ESPECIAL QUE INSERE E DEPOIS DIVIDE
-        if (node_get_n(childVals) == M - 1) {
-            cout << "Filho " << childId << " está cheio. Fazendo split especial..." << endl;
-
-            // *** NOVA LÓGICA: INSERIR NO FILHO E DEPOIS FAZER SPLIT ***
-            vector<int> tempChildVals = childVals; // Cópia temporária
-            int temp_n = node_get_n(tempChildVals);
-
-            // Encontra posição para inserir a nova chave
-            int pos = 0;
-            while (pos < temp_n && chave > node_get_chave(tempChildVals, pos)) {
-                pos++;
-            }
-
-            // Shift para direita
-            for (int i = temp_n; i > pos; i--) {
-                node_set_chave(tempChildVals, i, node_get_chave(tempChildVals, i - 1));
-            }
-
-            // Insere a chave temporariamente
-            node_set_chave(tempChildVals, pos, chave);
-            node_set_n(tempChildVals, temp_n + 1);
-
-            cout << "DEBUG: Nó temporário após inserção de " << chave << ": ";
-            for (int i = 0; i < node_get_n(tempChildVals); i++) {
-                cout << node_get_chave(tempChildVals, i) << " ";
-            }
-            cout << endl;
-
-            // *** AGORA FAZ SPLIT COM TODAS AS CHAVES (INCLUINDO A NOVA) ***
-            int t = T;
-            // *** CORREÇÃO: medianaIndex deve ser t-1, não t ***
-            int medianaIndex = t - 1;  // Para M=3, t=2 → medianaIndex=1 (valor do meio)
-            int med = node_get_chave(tempChildVals, medianaIndex);
-
-            cout << "Mediana index: " << medianaIndex << ", valor: " << med << endl;
-
-            // Cria novo nó
-            int zId = createNode(node_get_folha(tempChildVals));
-            vector<int> zVals;
-            readNode(zId, zVals);
-
-            // Nó original (child) fica com as primeiras t-1 chaves
-            node_set_n(childVals, medianaIndex);  // t-1 chaves
-            for (int i = 0; i < medianaIndex; ++i) {
-                node_set_chave(childVals, i, node_get_chave(tempChildVals, i));
-            }
-            // Zera chaves restantes
-            for (int i = medianaIndex; i < M - 1; ++i) {
-                node_set_chave(childVals, i, 0);
-            }
-
-            // *** CORREÇÃO: Novo nó (z) fica com as chaves APÓS a mediana ***
-            int chavesRestantes = (temp_n + 1) - medianaIndex - 1;  // Total - mediana - já copiadas
-            node_set_n(zVals, chavesRestantes);
-            for (int j = 0; j < chavesRestantes; ++j) {
-                node_set_chave(zVals, j, node_get_chave(tempChildVals, j + medianaIndex + 1));
-            }
-
-            // Move filhos se não for folha
-            if (!node_get_folha(tempChildVals)) {
-                for (int j = 0; j <= chavesRestantes; ++j) {
-                    node_set_filho(zVals, j, node_get_filho(tempChildVals, j + medianaIndex + 1));
-                }
-            }
-
-            // *** DEBUG: Mostrar estado antes de inserir no parent ***
-            cout << "DEBUG ANTES DE INSERIR NO PARENT:" << endl;
-            cout << "Parent (nó " << nodeId << ") n atual: " << node_get_n(nodeVals) << endl;
-            cout << "Child (nó " << childId << "): ";
-            for (int i = 0; i < node_get_n(childVals); i++) {
-                cout << node_get_chave(childVals, i) << " ";
-            }
-            cout << endl;
-            cout << "Novo nó (nó " << zId << "): ";
-            for (int i = 0; i < node_get_n(zVals); i++) {
-                cout << node_get_chave(zVals, i) << " ";
-            }
-            cout << endl;
-            cout << "Mediana a ser promovida: " << med << endl;
-
-            // Insere mediana no parent
-            int parent_n = node_get_n(nodeVals);
-
-            // Shift para direita no parent
-            for (int j = parent_n; j > childIndex; --j) {
-                node_set_chave(nodeVals, j, node_get_chave(nodeVals, j - 1));
-            }
-            for (int j = parent_n + 1; j > childIndex + 1; --j) {
-                node_set_filho(nodeVals, j, node_get_filho(nodeVals, j - 1));
-            }
-
-            node_set_chave(nodeVals, childIndex, med);
-            node_set_filho(nodeVals, childIndex + 1, zId);
-            node_set_n(nodeVals, parent_n + 1);
-
-            // Write back
-            writeNode(childId, childVals);
-            writeNode(zId, zVals);
-            writeNode(nodeId, nodeVals);
-
-            cout << "Split especial concluído. Mediana " << med << " promovida." << endl;
-            cout << "Nó " << childId << " agora tem: ";
-            for (int i = 0; i < node_get_n(childVals); i++) {
-                cout << node_get_chave(childVals, i) << " ";
-            }
-            cout << endl;
-            cout << "Nó " << zId << " agora tem: ";
-            for (int i = 0; i < node_get_n(zVals); i++) {
-                cout << node_get_chave(zVals, i) << " ";
-            }
-            cout << endl;
-
-        } else {
-            // Filho não está cheio, insere normalmente
-            insertNonFull(childId, chave);
-        }
-    }
-}
-
-// Requisito D: InsertB
-void ArvoreMVias::insertB(int chave, const string& dadosElemento) {
-    // Zera contadores para contar apenas a insercao
-    // leituraDisco = 0;
-    // escritaDisco = 0;
-
-    // 1. Verifica se a chave ja existe no indice
-    Resultado r = mSearch(chave);
-    if (r.encontrou) {
-        cout << "Aviso: Chave " << chave << " ja existe no indice. Insercao cancelada.\n";
-        return;
-    }
-
-    // 2. Escreve no arquivo principal
-    ofstream foutDados(arquivoDados, ios::binary | ios::app);
-    if (!foutDados) {
-        cerr << "Erro ao abrir " << arquivoDados << " para escrita.\n";
-        return;
-    }
-
-    Registro novoReg;
-    novoReg.chave = chave;
-    size_t len = min(dadosElemento.length(), (size_t)MAX_DATA_SIZE - 1);
-    dadosElemento.copy(novoReg.dados, len);
-    novoReg.dados[len] = '\0';
-    novoReg.deletado = false;
-
-    foutDados.write(reinterpret_cast<const char*>(&novoReg), Registro::getSize());
-    foutDados.close();
-
-    // 3. Insere na arvore B (arquivo bin)
-    if (!readHeader()) {
-        cerr << "Erro ao ler header antes de inserir.\n";
-        return;
-    }
-
-    vector<int> rootVals;
-    readNode(raiz, rootVals);
-
-    cout << "=== INICIANDO INSERÇÃO DA CHAVE " << chave << " ===" << endl;
-    cout << "Raiz atual: " << raiz << ", n=" << node_get_n(rootVals) << endl;
-
-    // Se raiz está cheia
-    if (node_get_n(rootVals) == M - 1) {
-        cout << "Raiz cheia. Criando nova raiz..." << endl;
-
-        // Cria nova raiz
-        int newRootId = createNode(false);
-        vector<int> newRootVals;
-        readNode(newRootId, newRootVals);
-
-        // Faz a raiz antiga ser filho da nova raiz
-        node_set_filho(newRootVals, 0, raiz);
-        writeNode(newRootId, newRootVals);
-
-        // Atualiza raiz
-        raiz = newRootId;
-        writeHeader();
-
-        cout << "Nova raiz criada: " << raiz << endl;
-
-        // *** AGORA chama insertNonFull que fará o split especial ***
-        insertNonFull(raiz, chave);
-    } else {
-        insertNonFull(raiz, chave);
-    }
-
-    cout << "Insercao da chave " << chave << " realizada com sucesso no indice e no arquivo principal.\n";
-
-    // Mostra estrutura final
-    cout << "=== ESTRUTURA FINAL APÓS INSERÇÃO ===" << endl;
-    print();
-}
-
-// Requisito A: Imprime o indice (e contadores)
+// Imprime o Indice.
 void ArvoreMVias::imprimirIndice() {
-    print(); // Imprime o indice
+    // Imprime a estrutura do índice.
+    print();
     // cout << "\n--- Contadores de Acesso a Disco ---\n";
     // cout << "Numero de leituras de disco: " << leituraDisco << endl;
     // cout << "Numero de escritas de disco: " << escritaDisco << endl;
-}
+} // Fim de imprimirIndice
 
-// Requisito B: Imprime todo o arquivo principal
+// Imprime o Conteudo Completo do Arquivo de Dados.
 void ArvoreMVias::imprimirArquivoPrincipal() {
+    // Abre o arquivo de dados para leitura.
     ifstream fin(arquivoDados, ios::binary);
+    // Verifica erro.
     if (!fin) {
         cout << "Arquivo de dados vazio ou nao existe (" << arquivoDados << ").\n";
         return;
     }
+    // Declara registro.
     Registro reg;
+    // Imprime cabeçalho.
     cout << "\n--- Conteudo COMPLETO do Arquivo Principal BINARIO (" << arquivoDados << ") ---\n";
     cout << "Chave | Deletado | Dados\n";
     cout << "------------------------------------------------------------------\n";
 
+    // Loop de leitura: lê registro por registro.
     while (fin.read(reinterpret_cast<char*>(&reg), reg.getSize())) {
-        // Exibe apenas se não estiver deletado (ou exibe todos, para debug)
+        // Exibe o registro.
         cout << setw(5) << reg.chave
              << " | " << setw(8) << (reg.deletado ? "TRUE" : "FALSE")
              << " | " << reg.dados << endl;
     }
+    // Fecha o arquivo.
     fin.close();
-}
+} // Fim de imprimirArquivoPrincipal
 
-// Requisito C: Imprime o conteudo do arquivo principal associado a chave
+// Imprime Registros Ativos Associados a uma Chave.
 void ArvoreMVias::imprimirArquivoPrincipal(int chave) {
+    // Abre o arquivo de dados para leitura.
     ifstream fin(arquivoDados, ios::binary);
+    // Verifica erro.
     if (!fin) {
         cerr << "Erro: Arquivo de dados nao existe ou nao pode ser aberto.\n";
         return;
     }
+    // Declara registro.
     Registro reg;
+    // Flag de busca.
     bool found = false;
 
+    // Imprime cabeçalho.
     cout << "Chave | Deletado | Dados\n";
     cout << "------------------------------------------------------------------\n";
 
+    // Loop de leitura.
     while (fin.read(reinterpret_cast<char*>(&reg), reg.getSize())) {
+        // Verifica se a chave coincide E se o registro NÃO está deletado (ativo).
         if (reg.chave == chave && !reg.deletado) {
+            // Exibe o registro.
             cout << setw(5) << reg.chave
                  << " | " << setw(8) << (reg.deletado ? "TRUE" : "FALSE")
                  << " | " << reg.dados << endl;
             found = true;
         }
     }
+    // Mensagem se nenhum registro ativo for encontrado.
     if (!found) cout << "Nenhum registro ativo com a chave " << chave << " encontrado no arquivo principal.\n";
+    // Fecha o arquivo.
     fin.close();
-}
-
-// Requisito E: Novo método eficiente de deleção no arquivo de dados
-void ArvoreMVias::removeDataFromFile(int chave) {
-    markAsDeleted(chave);
-}
-
-void ArvoreMVias::markAsDeleted(int chave) {
-    fstream file(arquivoDados, ios::binary | ios::in | ios::out);
-    if (!file) {
-        cerr << "Erro: Arquivo de dados binario nao existe ou nao pode ser aberto para marcacao de delecao.\n";
-        return;
-    }
-
-    Registro reg;
-    bool marked = false;
-    streampos currentPos = 0;
-    size_t regSize = reg.getSize();
-
-    // Itera sobre os registros
-    while (file.read(reinterpret_cast<char*>(&reg), regSize)) {
-        if (reg.chave == chave && !reg.deletado) {
-            // Encontrado! Marca como deletado
-            reg.deletado = true;
-
-            // Retorna ao início do registro no arquivo (currentPos)
-            file.seekp(currentPos);
-
-            // Grava APENAS o registro modificado de volta (1 acesso a disco)
-            file.write(reinterpret_cast<const char*>(&reg), regSize);
-
-            // Se a chave for única no arquivo de dados, podemos parar aqui.
-            // Se não for, continuaria para marcar todas as ocorrências.
-            marked = true;
-            break;
-        }
-        currentPos = file.tellg(); // Guarda a posição de onde começará a próxima leitura (início do próximo registro)
-    }
-
-    file.close();
-    if (marked) {
-        cout << "Registro com chave " << chave << " marcado como deletado no arquivo principal (acesso direto a disco).\n";
-    } else {
-        cerr << "Aviso: Registro ATIVO para a chave " << chave << " nao foi encontrado no arquivo principal.\n";
-    }
-    // escritaDisco++; // Conta o acesso de escrita
-}
-
-// Implementação do helper para remover a chave K_idx e o ponteiro A_{idx+1}
-void ArvoreMVias::removeKeyAndPointer(vector<int>& vals, int idx) {
-    int n = node_get_n(vals);
-
-    // Desloca chaves à esquerda
-    for (int i = idx; i < n - 1; ++i) {
-        node_set_chave(vals, i, node_get_chave(vals, i + 1));
-    }
-    node_set_chave(vals, n - 1, 0);
-
-    // Desloca filhos à esquerda (n+1 filhos)
-    for (int i = idx + 1; i <= n; ++i) {
-        node_set_filho(vals, i, node_get_filho(vals, i + 1));
-    }
-    node_set_filho(vals, n, 0); // último filho limpo
-
-    node_set_n(vals, n - 1);
-}
-
-// Limpa um nó no arquivo binário, marcando-o como vazio
-void ArvoreMVias::deleteNode(int nodeId) {
-    vector<int> empty(nodeInts(), 0);
-    // opcional: deixar folha = 1
-    if (empty.size() >= 2) empty[1] = 1;
-    writeNode(nodeId, empty);
-    cout << "[DIAG] deleteNode: limpo nó " << nodeId << endl;
-}
-
-// Empréstimo do irmão esquerdo
-void ArvoreMVias::borrowFromLeft(int parentId, int childIndex) {
-    vector<int> parentVals, leftVals, childVals;
-    readNode(parentId, parentVals);
-
-    int childId = node_get_filho(parentVals, childIndex);
-    int leftId = node_get_filho(parentVals, childIndex - 1);
-
-    readNode(childId, childVals);
-    readNode(leftId, leftVals);
-
-    int nChild = node_get_n(childVals);
-    int nLeft = node_get_n(leftVals);
-
-    // Shift chaves e filhos do child para a direita
-    for (int i = nChild; i > 0; --i) {
-        node_set_chave(childVals, i, node_get_chave(childVals, i - 1));
-    }
-    if (!node_get_folha(childVals)) {
-        for (int i = nChild + 1; i > 0; --i) {
-            node_set_filho(childVals, i, node_get_filho(childVals, i - 1));
-        }
-    }
-
-    // Move chave do pai para child[0]
-    node_set_chave(childVals, 0, node_get_chave(parentVals, childIndex - 1));
-
-    // Move último filho da esquerda para child[0] se não for folha
-    if (!node_get_folha(childVals))
-        node_set_filho(childVals, 0, node_get_filho(leftVals, nLeft));
-
-    // Move última chave de left para o pai
-    node_set_chave(parentVals, childIndex - 1, node_get_chave(leftVals, nLeft - 1));
-
-    // Atualiza contadores
-    node_set_n(childVals, nChild + 1);
-    node_set_n(leftVals, nLeft - 1);
-
-    writeNode(parentId, parentVals);
-    writeNode(childId, childVals);
-    writeNode(leftId, leftVals);
-}
-
-void ArvoreMVias::borrowFromRight(int parentId, int childIndex) {
-    vector<int> parentVals, rightVals, childVals;
-    readNode(parentId, parentVals);
-
-    int childId = node_get_filho(parentVals, childIndex);
-    int rightId = node_get_filho(parentVals, childIndex + 1);
-
-    readNode(childId, childVals);
-    readNode(rightId, rightVals);
-
-    int nChild = node_get_n(childVals);
-    int nRight = node_get_n(rightVals);
-
-    // Move chave do pai para child
-    node_set_chave(childVals, nChild, node_get_chave(parentVals, childIndex));
-
-    // Move filho inicial de right para child se não for folha
-    if (!node_get_folha(childVals))
-        node_set_filho(childVals, nChild + 1, node_get_filho(rightVals, 0));
-
-    // Move primeira chave de right para o pai
-    node_set_chave(parentVals, childIndex, node_get_chave(rightVals, 0));
-
-    // Shift chaves e filhos de right para esquerda
-    for (int i = 0; i < nRight - 1; ++i) {
-        node_set_chave(rightVals, i, node_get_chave(rightVals, i + 1));
-    }
-    for (int i = 0; i < nRight; ++i) {
-        node_set_filho(rightVals, i, node_get_filho(rightVals, i + 1));
-    }
-
-    node_set_chave(rightVals, nRight - 1, 0);
-    node_set_filho(rightVals, nRight, 0);
-
-    // Atualiza contadores
-    node_set_n(childVals, nChild + 1);
-    node_set_n(rightVals, nRight - 1);
-
-    writeNode(parentId, parentVals);
-    writeNode(childId, childVals);
-    writeNode(rightId, rightVals);
-}
-
-void ArvoreMVias::deleteB(int chave) {
-    if (!readHeader()) {
-        cerr << "Erro ao ler header antes da deleção.\n";
-        return;
-    }
-
-    // Verifica se a chave existe no índice
-    Resultado r = mSearch(chave);
-    if (!r.encontrou) {
-        cout << "Aviso: Chave " << chave << " não existe no índice. Deleção cancelada.\n";
-        return;
-    }
-
-    cout << "=== INICIANDO DELEÇÃO da chave " << chave << " ===\n";
-    cout << "Encontrada no nó " << r.indice_no << ", posição " << r.posicao << "\n";
-
-    // Chama a função recursiva de deleção
-    deleteFromNode(raiz, chave);
-
-    // Verifica se a raiz ficou vazia
-    vector<int> rootVals;
-    if (readNode(raiz, rootVals)) {
-        if (node_get_n(rootVals) == 0 && !node_get_folha(rootVals)) {
-            int newRootId = node_get_filho(rootVals, 0);
-            cout << "Raiz " << raiz << " ficou vazia. Substituindo por filho " << newRootId << "\n";
-            deleteNode(raiz);
-            raiz = newRootId;
-            writeHeader();
-        }
-    }
-
-    removeDataFromFile(chave);
-    cout << "Deleção da chave " << chave << " concluída.\n";
-    cout << "=== ESTRUTURA FINAL ===\n";
-    print();
-}
-
-void ArvoreMVias::deleteFromNode(int nodeId, int chave) {
-    cout << "DEBUG: M=" << M << ", T=" << T << ", T-1=" << T-1 << endl;
-
-    vector<int> nodeVals;
-    readNode(nodeId, nodeVals);
-
-    int n = node_get_n(nodeVals);
-    int i = 0;
-
-    // Encontra a chave ou a posição de descida
-    while (i < n && chave > node_get_chave(nodeVals, i)) {
-        i++;
-    }
-
-    // CASO 1: Chave encontrada neste nó
-    if (i < n && chave == node_get_chave(nodeVals, i)) {
-        if (node_get_folha(nodeVals)) {
-            // Caso 1A: Remoção simples em folha
-            cout << "Removendo chave " << chave << " da folha " << nodeId << endl;
-
-            // *** GUARDA O ESTADO ANTES DA REMOÇÃO ***
-            int nBefore = node_get_n(nodeVals);
-
-            removeFromLeaf(nodeVals, i);
-            writeNode(nodeId, nodeVals);
-
-            // *** CORREÇÃO: VERIFICAR UNDERFLOW NA FOLHA APÓS REMOÇÃO ***
-            int nAfter = node_get_n(nodeVals);
-            cout << "Folha " << nodeId << ": nBefore=" << nBefore << ", nAfter=" << nAfter << ", T-1=" << T-1 << endl;
-
-            if (nAfter < T - 1) {
-                cout << "=== UNDERFLOW DETECTADO na folha " << nodeId << " ===" << endl;
-                // Precisamos encontrar o pai desta folha para corrigir o underflow
-                int parentId = findParent(raiz, nodeId, 0);
-                if (parentId != 0) {
-                    int childIndex = findChildIndex(parentId, nodeId);
-                    if (childIndex != -1) {
-                        cout << "Pai encontrado: " << parentId << ", childIndex: " << childIndex << endl;
-                        cout << "Chamando fillChild..." << endl;
-                        fillChild(parentId, childIndex);
-                    } else {
-                        cout << "ERRO: Índice do filho não encontrado" << endl;
-                    }
-                } else {
-                    cout << "Folha " << nodeId << " é a raiz ou pai não encontrado" << endl;
-                    if (nodeId == raiz) {
-                        cout << "Folha É a raiz. Nada a fazer." << endl;
-                    }
-                }
-            } else {
-                cout << "Sem underflow na folha " << nodeId << endl;
-            }
-        } else {
-            // Caso 1B: Remoção em nó interno
-            cout << "Removendo chave " << chave << " do nó interno " << nodeId << endl;
-            removeFromInternalNode(nodeId, i);
-        }
-    } else {
-        // CASO 2: Chave não está neste nó - descer recursivamente
-        if (node_get_folha(nodeVals)) {
-            cout << "Erro: Chave " << chave << " não encontrada na folha " << nodeId << "\n";
-            return;
-        }
-
-        int childId = node_get_filho(nodeVals, i);
-        vector<int> childVals;
-        readNode(childId, childVals);
-
-        // Caso 2A: Filho tem número mínimo de chaves - garantir antes de descer
-        if (node_get_n(childVals) == T - 1) {
-            cout << "Filho " << childId << " tem mínimo de chaves. Executando fillChild...\n";
-            fillChild(nodeId, i);
-            // Re-ler o nó após possíveis mudanças
-            readNode(nodeId, nodeVals);
-            // Recalcular childId após fill (pode ter mudado)
-            childId = node_get_filho(nodeVals, i);
-        }
-
-        if (childId != 0) {
-            cout << "Descendo para filho " << childId << " na busca pela chave " << chave << "\n";
-            deleteFromNode(childId, chave);
-        }
-    }
-}
-
-void ArvoreMVias::removeFromLeaf(vector<int>& vals, int idx) {
-    int n = node_get_n(vals);
-    cout << "removeFromLeaf: n=" << n << ", idx=" << idx << endl;
-
-    // Desloca chaves para a esquerda
-    for (int i = idx; i < n - 1; i++) {
-        node_set_chave(vals, i, node_get_chave(vals, i + 1));
-    }
-    node_set_chave(vals, n - 1, 0);
-    node_set_n(vals, n - 1);
-
-    cout << "removeFromLeaf: novo n=" << node_get_n(vals) << endl;
-}
-
-void ArvoreMVias::removeFromInternalNode(int nodeId, int idx) {
-    vector<int> nodeVals;
-    readNode(nodeId, nodeVals);
-
-    int chaveParaDeletar = node_get_chave(nodeVals, idx);
-    cout << "DEBUG removeFromInternalNode: nó=" << nodeId << ", idx=" << idx
-         << ", chave=" << chaveParaDeletar << endl;
-
-    int leftChildId = node_get_filho(nodeVals, idx);
-    int rightChildId = node_get_filho(nodeVals, idx + 1);
-
-    cout << "DEBUG: leftChild=" << leftChildId << ", rightChild=" << rightChildId << endl;
-
-    vector<int> leftVals, rightVals;
-    readNode(leftChildId, leftVals);
-    readNode(rightChildId, rightVals);
-
-    int nLeft = node_get_n(leftVals);
-    int nRight = node_get_n(rightVals);
-
-    cout << "DEBUG: left.n=" << nLeft << ", right.n=" << nRight << ", T=" << T << endl;
-
-    // Caso 2A: Filho esquerdo tem pelo menos T chaves
-    if (nLeft >= T) {
-        int predecessor = getPredecessor(leftChildId);
-        cout << "Caso 2A: Predecessor = " << predecessor << endl;
-        node_set_chave(nodeVals, idx, predecessor);
-        writeNode(nodeId, nodeVals);
-        deleteFromNode(leftChildId, predecessor);
-    }
-    // Caso 2B: Filho direito tem pelo menos T chaves
-    else if (nRight >= T) {
-        int successor = getSuccessor(rightChildId);
-        cout << "Caso 2B: Successor = " << successor << endl;
-        node_set_chave(nodeVals, idx, successor);
-        writeNode(nodeId, nodeVals);
-        deleteFromNode(rightChildId, successor);
-    }
-    // Caso 2C: Ambos os filhos têm T-1 chaves
-    else {
-        cout << "Caso 2C: Fazendo merge dos filhos..." << endl;
-        mergeNodes(nodeId, idx);
-
-        // Após merge, re-ler o nó (pode ter mudado drasticamente)
-        if (readNode(nodeId, nodeVals)) {
-            // Agora a chave foi movida para o filho esquerdo
-            int mergedChildId = node_get_filho(nodeVals, idx);
-            if (mergedChildId != 0) {
-                cout << "Deletando recursivamente do filho merged " << mergedChildId << endl;
-                deleteFromNode(mergedChildId, chaveParaDeletar);
-            }
-        }
-    }
-}
-
-void ArvoreMVias::fillChild(int parentId, int idx) {
-    vector<int> parentVals;
-    readNode(parentId, parentVals);
-
-    int childId = node_get_filho(parentVals, idx);
-    if (childId == 0) return;
-
-    vector<int> childVals;
-    readNode(childId, childVals);
-
-    cout << "fillChild: parent=" << parentId << ", idx=" << idx
-         << ", child=" << childId << ", child.n=" << node_get_n(childVals) << endl;
-
-    // Tenta emprestar do irmão esquerdo
-    if (idx > 0) {
-        int leftSiblingId = node_get_filho(parentVals, idx - 1);
-        vector<int> leftVals;
-        readNode(leftSiblingId, leftVals);
-
-        if (node_get_n(leftVals) >= T) {
-            cout << "Emprestando do irmão esquerdo " << leftSiblingId << endl;
-            borrowFromLeft(parentId, idx);
-            return;
-        }
-    }
-
-    // Tenta emprestar do irmão direito
-    if (idx < node_get_n(parentVals)) {
-        int rightSiblingId = node_get_filho(parentVals, idx + 1);
-        vector<int> rightVals;
-        readNode(rightSiblingId, rightVals);
-
-        if (node_get_n(rightVals) >= T) {
-            cout << "Emprestando do irmão direito " << rightSiblingId << endl;
-            borrowFromRight(parentId, idx);
-            return;
-        }
-    }
-
-    // Se não pode emprestar, faz merge
-    cout << "Não pode emprestar. Fazendo merge..." << endl;
-    if (idx > 0) {
-        mergeNodes(parentId, idx - 1);
-    } else if (idx < node_get_n(parentVals)) {
-        mergeNodes(parentId, idx);
-    } else {
-        cout << "ERRO: Não foi possível fazer merge - índices inválidos" << endl;
-    }
-}
-
-int ArvoreMVias::getPredecessor(int nodeId) {
-    vector<int> vals;
-    readNode(nodeId, vals);
-
-    // Vai para o filho mais à direita até chegar em uma folha
-    while (!node_get_folha(vals)) {
-        int lastChild = node_get_filho(vals, node_get_n(vals));
-        readNode(lastChild, vals);
-    }
-
-    // Retorna a última chave da folha
-    return node_get_chave(vals, node_get_n(vals) - 1);
-}
-
-int ArvoreMVias::getSuccessor(int nodeId) {
-    vector<int> vals;
-    readNode(nodeId, vals);
-
-    // Vai para o filho mais à esquerda até chegar em uma folha
-    while (!node_get_folha(vals)) {
-        int firstChild = node_get_filho(vals, 0);
-        readNode(firstChild, vals);
-    }
-
-    // Retorna a primeira chave da folha
-    return node_get_chave(vals, 0);
-}
-
-// Método mergeNodes ESPECÍFICO para M=3
-void ArvoreMVias::mergeNodes(int parentId, int idx) {
-    vector<int> parentVals;
-    readNode(parentId, parentVals);
-
-    int leftId = node_get_filho(parentVals, idx);
-    int rightId = node_get_filho(parentVals, idx + 1);
-
-    vector<int> leftVals, rightVals;
-    readNode(leftId, leftVals);
-    readNode(rightId, rightVals);
-
-    int nLeft = node_get_n(leftVals);
-    int nRight = node_get_n(rightVals);
-    int parentKey = node_get_chave(parentVals, idx);
-
-    cout << "DEBUG MERGE: left=" << leftId << "(" << nLeft << "), right=" << rightId
-         << "(" << nRight << "), parentKey=" << parentKey << endl;
-
-    // PARA M=3: máximo 2 chaves por nó
-    if (nLeft + nRight + 1 > M - 1) {
-        cerr << "ERRO: Merge excederia capacidade máxima do nó!\n";
-        return;
-    }
-
-    // Move a chave do pai para o filho esquerdo
-    node_set_chave(leftVals, nLeft, parentKey);
-
-    // Copia chaves do filho direito para o esquerdo
-    for (int i = 0; i < nRight; i++) {
-        node_set_chave(leftVals, nLeft + 1 + i, node_get_chave(rightVals, i));
-    }
-
-    // Copia filhos (se não forem folhas)
-    if (!node_get_folha(leftVals)) {
-        for (int i = 0; i <= nRight; i++) {
-            node_set_filho(leftVals, nLeft + 1 + i, node_get_filho(rightVals, i));
-        }
-    }
-
-    // Atualiza contador
-    node_set_n(leftVals, nLeft + nRight + 1);
-
-    // Remove chave e ponteiro do pai
-    removeKeyAndPointer(parentVals, idx);
-
-    cout << "DEBUG: Após merge - left.n=" << node_get_n(leftVals)
-         << ", parent.n=" << node_get_n(parentVals) << endl;
-
-    // Atualiza nós
-    writeNode(leftId, leftVals);
-    writeNode(parentId, parentVals);
-
-    // Remove nó direito
-    deleteNode(rightId);
-
-    // VERIFICAÇÃO CRÍTICA: Se o pai é a raiz e ficou vazio
-    if (parentId == raiz && node_get_n(parentVals) == 0) {
-        cout << "Raiz " << parentId << " ficou vazia após merge. Promovendo filho " << leftId << " como nova raiz.\n";
-        raiz = leftId;
-        writeHeader();
-        deleteNode(parentId);
-    }
-    // Se não é raiz e ficou com underflow
-    else if (parentId != raiz && node_get_n(parentVals) < T - 1) {
-        cout << "Pai " << parentId << " com underflow. Buscando avô...\n";
-        int grandParentId = findParent(raiz, parentId, 0);
-        if (grandParentId != 0) {
-            int parentIndex = findChildIndex(grandParentId, parentId);
-            if (parentIndex != -1) {
-                cout << "Chamando fillChild no avô " << grandParentId << " para índice " << parentIndex << endl;
-                fillChild(grandParentId, parentIndex);
-            }
-        }
-    }
-}
-
-int ArvoreMVias::findParent(int currentNode, int targetId, int parentId) {
-    cout << "findParent: current=" << currentNode << ", target=" << targetId << ", parent=" << parentId << endl;
-
-    if (currentNode == targetId) {
-        cout << "Encontrado! Pai é: " << parentId << endl;
-        return parentId;
-    }
-    if (currentNode == 0) return 0;
-
-    vector<int> vals;
-    if (!readNode(currentNode, vals)) return 0;
-
-    if (node_get_folha(vals)) return 0;
-
-    int n = node_get_n(vals);
-    cout << "Buscando nos " << n+1 << " filhos do nó " << currentNode << endl;
-
-    for (int i = 0; i <= n; i++) {
-        int childId = node_get_filho(vals, i);
-        cout << "Filho[" << i << "] = " << childId << endl;
-        if (childId == targetId) {
-            cout << "Encontrado pai direto: " << currentNode << " para filho " << targetId << endl;
-            return currentNode;
-        }
-        if (childId != 0) {
-            int result = findParent(childId, targetId, currentNode);
-            if (result != 0) return result;
-        }
-    }
-    return 0;
-}
-
-int ArvoreMVias::findChildIndex(int parentId, int childId) {
-    cout << "findChildIndex: parent=" << parentId << ", child=" << childId << endl;
-
-    vector<int> parentVals;
-    if (!readNode(parentId, parentVals)) return -1;
-
-    int n = node_get_n(parentVals);
-    cout << "Procurando em " << n+1 << " filhos do pai " << parentId << endl;
-
-    for (int i = 0; i <= n; i++) {
-        int currentChild = node_get_filho(parentVals, i);
-        cout << "Filho[" << i << "] = " << currentChild << endl;
-        if (currentChild == childId) {
-            cout << "Encontrado no índice: " << i << endl;
-            return i;
-        }
-    }
-    cout << "Filho não encontrado!" << endl;
-    return -1;
-}
+} // Fim de imprimirArquivoPrincipal
+// ====================================================================================================================
