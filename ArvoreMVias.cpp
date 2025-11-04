@@ -39,121 +39,170 @@ ArvoreMVias::ArvoreMVias(const string& txt, const string& bin, const string& dad
 // METODOS DE SEQUENCIAMENTO E I/O DE DISCO:
 
 // Calcula o Numero de Inteiros que compoem um Noh no Disco.
-// FORMATO: [n (1 int), folha (1 int), chaves (M-1 ints), filhos (M ints)]
-int ArvoreMVias::nodeInts() const {
-    return 2 + (M - 1) + M; // 2 * M + 1
-}
+// FORMATO: [n (1 int), folha (1 int), chaves (M-1 ints), filhos (M ints)]}
+int ArvoreMVias::nodeInts() const {return 2 + (M - 1) + M;}
 
+// --------------------------------------------------------------------------------------------------------------------
+
+// Escreve o Cabecalho da Arvore no Disco (M, raiz, nextNodeId).
 void ArvoreMVias::writeHeader() {
-    // Abre o arquivo binario, criando-o se nao existir
-    fstream fout(arquivoBin, ios::binary | ios::in | ios::out);
-    if (!fout) {
-        ofstream cr(arquivoBin, ios::binary);
-        cr.close();
-        fout.open(arquivoBin, ios::binary | ios::in | ios::out);
-    }
-    // Grava M, raiz e nextNodeId no inicio
-    fout.seekp(0);
-    int aM = M, aRaiz = raiz, aNext = nextNodeId;
-    fout.write((char*)&aM, sizeof(int));
-    fout.write((char*)&aRaiz, sizeof(int));
-    fout.write((char*)&aNext, sizeof(int));
-    fout.close();
-}
 
+    fstream fout(arquivoBin, ios::binary | ios::in | ios::out);     // Abre o Arquivo Binario para Leitura e Escrita.
+    if (!fout) {                                                    // Verifica se a Abertura falhou.
+        ofstream cr(arquivoBin, ios::binary);                       // Tenta criar o Arquivo antes, caso falhe.
+        cr.close();                                                 // Fecha a Criacao.
+        fout.open(arquivoBin, ios::binary | ios::in | ios::out);    // Tenta reabrir para Escrita/Leitura.
+    } // Fim do IF
+
+    fout.seekp(0);                                  // Posiciona o Ponteiro de Escrita no Inicio do Arquivo (Posicao 0)
+    int aM = M, aRaiz = raiz, aNext = nextNodeId;   // Cria Copias Temporarias das Variaveis para Escrita.
+    fout.write((char*)&aM, sizeof(int));            // Escreve a Ordem M.
+    fout.write((char*)&aRaiz, sizeof(int));         // Escreve o ID da Raiz.
+    fout.write((char*)&aNext, sizeof(int));         // Escreve o Proximo ID Disponivel.
+    fout.close();                                   // Fecha o Arquivo.
+
+} // Fim do writeHeader
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Leh o Cabecalho da Arvore do Disco.
 bool ArvoreMVias::readHeader() {
-    ifstream fin(arquivoBin, ios::binary);
-    if (!fin) return false;
-    fin.seekg(0);
-    int aM, aRaiz, aNext;
-    if (!fin.read((char*)&aM, sizeof(int))) { fin.close(); return false; }
-    if (!fin.read((char*)&aRaiz, sizeof(int))) { fin.close(); return false; }
-    if (!fin.read((char*)&aNext, sizeof(int))) { fin.close(); return false; }
 
-    // Alerta/Reset se a ordem no arquivo for diferente da ordem atual
+    ifstream fin(arquivoBin, ios::binary);      // Abre o Arquivo Binario para Leitura.
+    if (!fin) return false;                     // Retorna Falso se o Arquivo nao puder ser Aberto.
+    fin.seekg(0);                               // Declara Variaveis de Leitura no Inicio
+    int aM, aRaiz, aNext;                       // Declara Variaveis para Armazenar o Header Lido.
+
+    // Tentativas de Leitura. No caso de Falhas, Fecham o Arquivo e Retornam Falso:
+    if (!fin.read((char*)&aM, sizeof(int))) { fin.close(); return false; }      // Tenta ler M.
+    if (!fin.read((char*)&aRaiz, sizeof(int))) { fin.close(); return false; }   // Tenta ler a Raiz.
+    if (!fin.read((char*)&aNext, sizeof(int))) { fin.close(); return false; }   // Tenta ler o Proximo ID.
+
+    // Alerta/Reseta caso a Ordem no Arquivo (aM) for DIFERENTE da Ordem Atual (M).
     if (aM != M) {
-        cerr << "Aviso: Ordem (M=" << aM << ") do indice e diferente da ordem atual (M=" << M << "). Reiniciando indice E arquivo de dados.\n";
-        fin.close();
 
-        // Define as variaveis de estado para 1, para que geradorBinario as use
+        // Imprime um Aviso de Incompatibilidade:
+        cerr << "Aviso: Ordem (M=" << aM << ") do indice e diferente da ordem atual (M=" << M << ")."
+             << "Reiniciando indice E arquivo de dados.\n";
+
+        fin.close();        // Fecha o Arquivo de Indice.
+
+        // Define as Variaveis de Estado para a Inicializacao da Nova Arvore:
         raiz = 1;
         nextNodeId = 1;
         T = (M + 1) / 2;
 
-        ofstream foutDados(arquivoDados, ios::trunc);
-        if (!foutDados) {
+        ofstream foutDados(arquivoDados, ios::trunc);   // Tenta Limpar (Truncar) o Arquivo de Dados.
+        if (!foutDados) {                               // Se Falhar ao Abrir/Truncar o Arquivo de Dados, imprime o erro:
             cerr << "Erro fatal: Nao foi possivel reiniciar o arquivo de dados.\n";
-            return false;
-        }
-        foutDados.close();
+            return false;   // Retorna Falso.
+        } // Fim do IF
 
-        return false;
-    }
-    raiz = aRaiz;
-    nextNodeId = aNext;
-    fin.close();
-    return true;
-}
+        foutDados.close();  // Fecha o Arquivo de Dados.
 
-// Simula a escrita de um bloco no disco (incrementa escritaDisco)
+        return false;       // Retorna Falso.
+
+    } // Fim do IF
+
+    raiz = aRaiz;           // Atualiza o ID da Raiz com o Valor Lido.
+    nextNodeId = aNext;     // Atualiza o Proximo ID de Noh com o Valor Lido.
+    fin.close();            // Fecha o Arquivo de Indice.
+    return true;            // Retorna Verdadeiro, indicando Sucesso na Leitura do Header.
+
+} // Fim do readHeader
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Escreve um Noh (Vetor de Ints) no Disco.
 void ArvoreMVias::writeNode(int id, const vector<int>& vals) {
-    fstream fout(arquivoBin, ios::in | ios::out | ios::binary);
-    if (!fout) { cerr << "Erro de arquivo (writeNode).\n"; return; }
 
-    int headerBytes = 3 * sizeof(int);
-    int ints = nodeInts();
-    int nodeBytes = ints * sizeof(int);
-    // Calcula a posicao no arquivo: Header + (ID - 1) * Tamanho do No
+    fstream fout(arquivoBin, ios::in | ios::out | ios::binary);         // Abre o Arquivo para Leitura e Escrita.
+    if (!fout) { cerr << "Erro de arquivo (writeNode).\n"; return; }    // Verifica se houve Erro na Abertura.
+
+    int headerBytes = 3 * sizeof(int);      // Calcula o Tamanho do Cabecalho em Bytes.
+    int ints = nodeInts();                  // Obtem o Numero Total de Inteiros por Noh.
+    int nodeBytes = ints * sizeof(int);     // Calcula o Tamanho do Noh em Butes
+
+    // Calcula a Posicao do Noh no Arquivo: Header + (ID - 1) * Tamanho do Noh:
     streampos pos = static_cast<std::streamoff>(headerBytes) + static_cast<std::streamoff>((id - 1) * nodeBytes);
-    fout.seekp(pos);
-    for (int i = 0; i < ints; ++i) {
-        int v = vals[i];
-        fout.write((char*)&v, sizeof(int));
-    }
-    fout.close();
+    fout.seekp(pos);        // Posiciona o Ponteiro de Escrita.
+
+    for (int i = 0; i < ints; ++i) {        // Itera sobre Todos os Inteiros do Noh.
+        int v = vals[i];                    // Obtem o Valor.
+        fout.write((char*)&v, sizeof(int)); // Escreve o Inteiro no Arquivo.
+    } // Fim do FOR
+
+    fout.close();   // Fecha o Arquivo.
     // escritaDisco++; // Incrementa o contador de acesso a disco (escrita)
-}
 
-// Simula a leitura de um bloco no disco (incrementa leituraDisco)
+} // Fim do writeNode
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Leh um Noh (Vetor de Ints) do Disco.
 bool ArvoreMVias::readNode(int id, vector<int>& vals) {
-    ifstream fin(arquivoBin, ios::binary);
-    if (!fin) return false;
-    int headerBytes = 3 * sizeof(int);
-    int ints = nodeInts();
-    int nodeBytes = ints * sizeof(int);
-    // Calcula a posicao no arquivo
+
+    ifstream fin(arquivoBin, ios::binary);  // Abre o Arquivo para Leitura.
+    if (!fin) return false;                 // Retorna Falso se nao Abrir.
+    int headerBytes = 3 * sizeof(int);      // Calcula o Tamanho do Cabecalho.
+    int ints = nodeInts();                  // Obtem o Numero de Inteiros por Noh.
+    int nodeBytes = ints * sizeof(int);     // Calcula o Tamanho do Noh em Bytes.
+
+    // Calcula a Posicao (Offset) do Noh no Arquivo:
     streampos pos = static_cast<std::streamoff>(headerBytes) + static_cast<std::streamoff>((id - 1) * nodeBytes);
 
-    // Verifica se o no existe (evita leitura fora do limite)
-    fin.seekg(0, ios::end);
-    streampos fileSize = fin.tellg();
+    // Verifica o Tamanho do Arquivo para Evitar Leitura Fora do Limite (Corrupcao).
+    fin.seekg(0, ios::end);             // Posiciona no Final do Arquivo.
+    streampos fileSize = fin.tellg();   // Obtem o Tamanho Total do Arquivo.
+
+    // Se o Fim do Noh Calculado Ultrapassa o Fim do Arquivo:
     if (pos + static_cast<std::streamoff>(nodeBytes) > fileSize) {
-        fin.close();
-        return false;
-    }
+        fin.close();    // Fecha o Arquivo.
+        return false;   // Retorna Falso.
+    } // Fim do IF
 
-    fin.seekg(pos);
-    vals.assign(ints, 0);
+    fin.seekg(pos);         // Posiciona o Ponteiro de Leitura no Inicio do Noh.
+    vals.assign(ints, 0);   // Redimensiona o Vetor para o Numero Correto de Inteiros (Inicializa com 0).
+
+    // Itera sobre os Inteiros do Noh:
     for (int i = 0; i < ints; ++i) {
-        int v = 0;
-        fin.read((char*)&v, sizeof(int));
-        vals[i] = v;
-    }
-    fin.close();
-    // leituraDisco++; // Incrementa o contador de acesso a disco (leitura)
-    return true;
-}
+        int v = 0;                          // Armazena o Valor Lido.
+        fin.read((char*)&v, sizeof(int));   // Leh o Inteiro.
+        vals[i] = v;                        // Armazena no Vetor.
+    } // Fim do FOR
 
-// Getters/Setters do no serializado
+    fin.close();    // Fecha o Arquivo.
+    // leituraDisco++; // Incrementa o contador de acesso a disco (leitura)
+
+    return true;    // Retorna Verdadeiro
+
+} // Fim do readNode
+
+// ====================================================================================================================
+
+// METODOS DE ACESSO/MANIPULACAO A CAMPOS DO NOH EM MEMORIA:
+
+// Getters e Setters - para N:
 int ArvoreMVias::node_get_n(const vector<int>& vals) const { return vals[0]; }
 void ArvoreMVias::node_set_n(vector<int>& vals, int n) { vals[0] = n; }
+// --------------------------------------------------------------------------------------------------------------------
+// Getters e Setters - para Folha:
 bool ArvoreMVias::node_get_folha(const vector<int>& vals) const { return vals[1] != 0; }
 void ArvoreMVias::node_set_folha(vector<int>& vals, bool folha) { vals[1] = folha ? 1 : 0; }
+// --------------------------------------------------------------------------------------------------------------------
+// Getters e Setters - para Chave:
 int ArvoreMVias::node_get_chave(const vector<int>& vals, int idx) const { return vals[2 + idx]; }
 void ArvoreMVias::node_set_chave(vector<int>& vals, int idx, int chave) { vals[2 + idx] = chave; }
+// --------------------------------------------------------------------------------------------------------------------
+// Getters e Setters - para Filho:
 int ArvoreMVias::node_get_filho(const vector<int>& vals, int idx) const { return vals[2 + (M - 1) + idx]; }
 void ArvoreMVias::node_set_filho(vector<int>& vals, int idx, int filho) { vals[2 + (M - 1) + idx] = filho; }
 
+// ====================================================================================================================
+
+//METODOS DE INSERCAO (INSERTB):
+
+// Cria e inicializa um novo Noh no Disco.
 int ArvoreMVias::createNode(bool folha) {
     int id = nextNodeId++;
     int ints = nodeInts();
