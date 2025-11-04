@@ -36,14 +36,12 @@ ArvoreMVias::ArvoreMVias(const string& txt, const string& bin, const string& dad
 // ====================================================================================================================
 
 // ====================================================================================================================
-// METODOS DE SEQUENCIAMENTO E I/O DE DISCO:
 
+// METODOS DE SEQUENCIAMENTO E I/O DE DISCO:
 // Calcula o Numero de Inteiros que compoem um Noh no Disco.
 // FORMATO: [n (1 int), folha (1 int), chaves (M-1 ints), filhos (M ints)]}
 int ArvoreMVias::nodeInts() const {return 2 + (M - 1) + M;}
-
 // --------------------------------------------------------------------------------------------------------------------
-
 // Escreve o Cabecalho da Arvore no Disco (M, raiz, nextNodeId).
 void ArvoreMVias::writeHeader() {
 
@@ -62,9 +60,7 @@ void ArvoreMVias::writeHeader() {
     fout.close();                                   // Fecha o Arquivo.
 
 } // Fim do writeHeader
-
 // --------------------------------------------------------------------------------------------------------------------
-
 // Leh o Cabecalho da Arvore do Disco.
 bool ArvoreMVias::readHeader() {
 
@@ -110,9 +106,7 @@ bool ArvoreMVias::readHeader() {
     return true;            // Retorna Verdadeiro, indicando Sucesso na Leitura do Header.
 
 } // Fim do readHeader
-
 // --------------------------------------------------------------------------------------------------------------------
-
 // Escreve um Noh (Vetor de Ints) no Disco.
 void ArvoreMVias::writeNode(int id, const vector<int>& vals) {
 
@@ -136,9 +130,7 @@ void ArvoreMVias::writeNode(int id, const vector<int>& vals) {
     // escritaDisco++; // Incrementa o contador de acesso a disco (escrita)
 
 } // Fim do writeNode
-
 // --------------------------------------------------------------------------------------------------------------------
-
 // Leh um Noh (Vetor de Ints) do Disco.
 bool ArvoreMVias::readNode(int id, vector<int>& vals) {
 
@@ -181,7 +173,6 @@ bool ArvoreMVias::readNode(int id, vector<int>& vals) {
 // ====================================================================================================================
 
 // METODOS DE ACESSO/MANIPULACAO A CAMPOS DO NOH EM MEMORIA:
-
 // Getters e Setters - para N:
 int ArvoreMVias::node_get_n(const vector<int>& vals) const { return vals[0]; }
 void ArvoreMVias::node_set_n(vector<int>& vals, int n) { vals[0] = n; }
@@ -201,7 +192,6 @@ void ArvoreMVias::node_set_filho(vector<int>& vals, int idx, int filho) { vals[2
 // ====================================================================================================================
 
 // METODOS DE INSERCAO (INSERTB):
-
 // Cria e inicializa um novo Noh no Disco.
 int ArvoreMVias::createNode(bool folha) {
 
@@ -221,14 +211,10 @@ int ArvoreMVias::createNode(bool folha) {
     return id;      // Retorna ID do Noh Recem-Criado.
 
 } // Fim do createNode
-
 // --------------------------------------------------------------------------------------------------------------------
-
 // Divide o Noh quando um Noh Filho estah Cheio.
 void splitChild(int parentId, int childIndex, int childId){}    // Nao usado diretamente.
-
 // --------------------------------------------------------------------------------------------------------------------
-
 // Insercao Principal - lida com Split de Filho Cheio.
 void ArvoreMVias::insertNonFull(int nodeId, int chave) {
     vector<int> nodeVals;                                       // Declara vetor para o noh.
@@ -362,9 +348,7 @@ void ArvoreMVias::insertNonFull(int nodeId, int chave) {
         } // Fim do else
     } // Fim do else (noh interno)
 } // Fim de insertNonFull
-
 // --------------------------------------------------------------------------------------------------------------------
-
 // Insere Chave e Dados.
 void ArvoreMVias::insertB(int chave, const string& dadosElemento) {
     // leituraDisco = 0; // Zera contadores (comentado)
@@ -433,14 +417,11 @@ void ArvoreMVias::insertB(int chave, const string& dadosElemento) {
 // ====================================================================================================================
 
 // METODOS DE REMOCAO NO ARQUIVO DE DADOS:
-
 // Encontra e marca o Registro como Deletado (Delecao Logica).
 void ArvoreMVias::removeDataFromFile(int chave) {
     markAsDeleted(chave);                                       // Chama a implementacao de delecao logica.
 } // Fim de removeDataFromFile
-
 // --------------------------------------------------------------------------------------------------------------------
-
 // Implementacao da Remocao Logica no arquivo principal.
 void ArvoreMVias::markAsDeleted(int chave) {
     fstream file(arquivoDados, ios::binary | ios::in | ios::out); // Abre o arquivo para leitura, escrita e binario.
@@ -480,6 +461,7 @@ void ArvoreMVias::markAsDeleted(int chave) {
 
 // ====================================================================================================================
 
+// METODOS DE REMOCAO NO INDICE (DELETEB)
 // Remove Chave K_idx e Ponteiro A_{idx+1} de um Noh na Memoria, deslocando os elementos.
 void ArvoreMVias::removeKeyAndPointer(vector<int>& vals, int idx) {
     int n = node_get_n(vals);                                   // Obtem n.
@@ -496,7 +478,7 @@ void ArvoreMVias::removeKeyAndPointer(vector<int>& vals, int idx) {
 
     node_set_n(vals, n - 1);                                    // Decrementa n.
 } // Fim de removeKeyAndPointer
-
+// --------------------------------------------------------------------------------------------------------------------
 // Funcao Recursiva Principal para Remocao no Indice.
 void ArvoreMVias::deleteFromNode(int nodeId, int chave) {
     cout << "DEBUG: M=" << M << ", T=" << T << ", T-1=" << T-1 << endl; // Log
@@ -564,7 +546,7 @@ void ArvoreMVias::deleteFromNode(int nodeId, int chave) {
         } // Fim do if
     } // Fim do else
 } // Fim de deleteFromNode
-
+// --------------------------------------------------------------------------------------------------------------------
 // Remove Chave de um Noh Folha na Memoria e atualiza 'n'.
 void ArvoreMVias::removeFromLeaf(vector<int>& vals, int idx) {
     int n = node_get_n(vals);                                   // Obtem n.
@@ -578,7 +560,7 @@ void ArvoreMVias::removeFromLeaf(vector<int>& vals, int idx) {
 
     cout << "removeFromLeaf: novo n=" << node_get_n(vals) << endl; // Log
 } // Fim de removeFromLeaf
-
+// --------------------------------------------------------------------------------------------------------------------
 // Substitui a Chave por Predecessor/Sucessor ou faz Merge.
 void ArvoreMVias::removeFromInternalNode(int nodeId, int idx) {
     vector<int> nodeVals;                                       // Leh o noh.
@@ -626,7 +608,7 @@ void ArvoreMVias::removeFromInternalNode(int nodeId, int idx) {
         } // Fim do if
     } // Fim do else
 } // Fim de removeFromInternalNode
-
+// --------------------------------------------------------------------------------------------------------------------
 // Faz o Filho em Underflow (T-1) receber uma Chave (Empresta ou Funde).
 void ArvoreMVias::fillChild(int parentId, int idx) {
     vector<int> parentVals;                                     // Leh o noh pai.
@@ -679,7 +661,7 @@ void ArvoreMVias::fillChild(int parentId, int idx) {
         cout << "ERRO: Nao foi possivel fazer merge - indices invalidos" << endl; // Erro
     } // Fim do else
 } // Fim de fillChild
-
+// --------------------------------------------------------------------------------------------------------------------
 // Funde 2 Nohs Irmaos e a Chave do Pai entre eles.
 void ArvoreMVias::mergeNodes(int parentId, int idx) {
     vector<int> parentVals;                                     // Leh o noh pai.
@@ -748,7 +730,7 @@ void ArvoreMVias::mergeNodes(int parentId, int idx) {
         } // Fim do if
     } // Fim do else if
 } // Fim de mergeNodes
-
+// --------------------------------------------------------------------------------------------------------------------
 // Encontra a MAIOR Chave na Subarvore a ESQUERDA (predecessor).
 int ArvoreMVias::getPredecessor(int nodeId) {
     vector<int> vals;                                           // Leh o noh inicial.
@@ -761,7 +743,7 @@ int ArvoreMVias::getPredecessor(int nodeId) {
 
     return node_get_chave(vals, node_get_n(vals) - 1);          // Retorna a ultima chave da folha.
 } // Fim de getPredecessor
-
+// --------------------------------------------------------------------------------------------------------------------
 // Encontra a MENOR Chave na Subarvore a DIREITA (sucessor).
 int ArvoreMVias::getSuccessor(int nodeId) {
     vector<int> vals;                                           // Leh o noh inicial.
@@ -774,7 +756,7 @@ int ArvoreMVias::getSuccessor(int nodeId) {
 
     return node_get_chave(vals, 0);                             // Retorna a primeira chave da folha.
 } // Fim de getSuccessor
-
+// --------------------------------------------------------------------------------------------------------------------
 // Move Chave do Irmao ESQUERDO para o Noh em Underflow.
 void ArvoreMVias::borrowFromLeft(int parentId, int childIndex) {
     vector<int> parentVals, leftVals, childVals;                // Declaracao de vetores para os tres nos.
@@ -812,7 +794,7 @@ void ArvoreMVias::borrowFromLeft(int parentId, int childIndex) {
     writeNode(childId, childVals);
     writeNode(leftId, leftVals);
 } // Fim de borrowFromLeft
-
+// --------------------------------------------------------------------------------------------------------------------
 // Move Chave do Irmao DIREITO para o Noh em Underflow.
 void ArvoreMVias::borrowFromRight(int parentId, int childIndex) {
     vector<int> parentVals, rightVals, childVals;                // Declaracao de vetores para os tres nos.
@@ -850,7 +832,7 @@ void ArvoreMVias::borrowFromRight(int parentId, int childIndex) {
     writeNode(childId, childVals);
     writeNode(rightId, rightVals);
 } // Fim de borrowFromRight
-
+// --------------------------------------------------------------------------------------------------------------------
 // Limpa o conteudo de um Noh no Disco.
 void ArvoreMVias::deleteNode(int nodeId) {
     vector<int> empty(nodeInts(), 0);                           // Cria um vetor de zeros do tamanho de um noh.
@@ -858,7 +840,7 @@ void ArvoreMVias::deleteNode(int nodeId) {
     writeNode(nodeId, empty);                                   // Escreve o noh vazio.
     cout << "[DIAG] deleteNode: limpo noh " << nodeId << endl;   // Log
 } // Fim de deleteNode
-
+// --------------------------------------------------------------------------------------------------------------------
 // Busca recursivamente o Pai de um Noh.
 int ArvoreMVias::findParent(int currentNode, int targetId, int parentId) {
     cout << "findParent: current=" << currentNode << ", target=" << targetId << ", parent=" << parentId << endl; // Log
@@ -891,7 +873,7 @@ int ArvoreMVias::findParent(int currentNode, int targetId, int parentId) {
     } // Fim do for
     return 0;                                                   // Retorna 0 se o pai nao for encontrado.
 } // Fim de findParent
-
+// --------------------------------------------------------------------------------------------------------------------
 // Encontra a Posicao (indice) do Ponteiro para o Filho.
 int ArvoreMVias::findChildIndex(int parentId, int childId) {
     cout << "findChildIndex: parent=" << parentId << ", child=" << childId << endl; // Log
@@ -913,7 +895,7 @@ int ArvoreMVias::findChildIndex(int parentId, int childId) {
     cout << "Filho nao encontrado!" << endl;                     // Log
     return -1;                                                  // Se nao encontrar.
 } // Fim de findChildIndex
-
+// --------------------------------------------------------------------------------------------------------------------
 // Remove Chave do Indice e Marca Dados como Deletados.
 void ArvoreMVias::deleteB(int chave) {
     if (!readHeader()) {                                        // Tenta ler o cabecalho.
@@ -949,6 +931,8 @@ void ArvoreMVias::deleteB(int chave) {
     print();                                                    // Imprime a estrutura final.
 } // Fim de deleteB
 
+// ====================================================================================================================
+// METODO DE BUSCA (MSEARCH):
 Resultado ArvoreMVias::mSearch(int chave) {
     // leituraDisco = 0; // Zera contadores (comentado)
     // escritaDisco = 0; // Zera contadores (comentado)
@@ -986,9 +970,9 @@ Resultado ArvoreMVias::mSearch(int chave) {
 
     return {-1, -1, false};                                     // Retorno para arvores vazias ou erro inesperado.
 } // Fim de mSearch
+// ====================================================================================================================
 
 // METODOS DE GERADOR DE ARQUIVO BINARIO E IMPRESSOES:
-
 // Inicializa ou Carrega a Estrutura do Indice Binario.
 void ArvoreMVias::geradorBinario() {
     // Tenta ler o header; se falhar, inicializa o arquivo.
@@ -1009,7 +993,7 @@ void ArvoreMVias::geradorBinario() {
         cout << "Arquivo binario existente lido. Raiz ID=" << raiz << " Proximo ID=" << nextNodeId << "\n";
     }
 } // Fim de geradorBinario
-
+// --------------------------------------------------------------------------------------------------------------------
 // Imprime o Conteudo de Todos os Nohs do Indice.
 void ArvoreMVias::print() {
     // Reseta contadores (comentado)
@@ -1053,7 +1037,7 @@ void ArvoreMVias::print() {
     // Imprime o rodapé.
     cout << "------------------------------------------------------------------\n";
 } // Fim de print
-
+// --------------------------------------------------------------------------------------------------------------------
 // Imprime o Indice.
 void ArvoreMVias::imprimirIndice() {
     // Imprime a estrutura do índice.
@@ -1062,7 +1046,7 @@ void ArvoreMVias::imprimirIndice() {
     // cout << "Numero de leituras de disco: " << leituraDisco << endl;
     // cout << "Numero de escritas de disco: " << escritaDisco << endl;
 } // Fim de imprimirIndice
-
+// --------------------------------------------------------------------------------------------------------------------
 // Imprime o Conteudo Completo do Arquivo de Dados.
 void ArvoreMVias::imprimirArquivoPrincipal() {
     // Abre o arquivo de dados para leitura.
@@ -1089,7 +1073,7 @@ void ArvoreMVias::imprimirArquivoPrincipal() {
     // Fecha o arquivo.
     fin.close();
 } // Fim de imprimirArquivoPrincipal
-
+// --------------------------------------------------------------------------------------------------------------------
 // Imprime Registros Ativos Associados a uma Chave.
 void ArvoreMVias::imprimirArquivoPrincipal(int chave) {
     // Abre o arquivo de dados para leitura.
@@ -1124,4 +1108,5 @@ void ArvoreMVias::imprimirArquivoPrincipal(int chave) {
     // Fecha o arquivo.
     fin.close();
 } // Fim de imprimirArquivoPrincipal
+
 // ====================================================================================================================
