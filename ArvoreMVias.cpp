@@ -1,30 +1,45 @@
-// Integrantes do grupo:
-// Caio Monteiro Sartori   N° 15444598
-// Mateus Henrique Carriel   N° 15698362
-// Murilo Augusto Jorge   N° 15552251
+// ====================================================================================================================
 
-// Arquivo .cpp de implementação da classe árvore M-vias
+// INTEGRANTES DO GRUPO:
+// Caio Monteiro Sartori            N° 15444598
+// Mateus Henrique J. S. Carriel    N° 15698362
+// Murilo Augusto Jorge             N° 15552251
 
-#include "ArvoreMVias.h"
-#include <cstring>
-#include <sstream>
-#include <cmath>
-#include <iostream>
-#include <iomanip>
+// ====================================================================================================================
 
+// ====================================================================================================================
+
+// INCLUSAO DE BIBLIOTECAS E ARQUIVOS:
+#include "ArvoreMVias.h"    // Arquivo Header do Presente Arquivo.
+#include <cstring>          // Funcoes de Manipulacao de Memoria (memset).
+#include <sstream>          // Manipulacao de Streams de Strings.
+#include <cmath>            // Funcoes Matematicas.
+#include <iostream>         // Operacoes de Entradas e Saidas.
+#include <iomanip>          // Formatacao de Saida.
+
+// ====================================================================================================================
+
+// ====================================================================================================================
+// CONSTRUTOR: Configura os Nomes de Arquivo e a Ordem (M):
 ArvoreMVias::ArvoreMVias(const string& txt, const string& bin, const string& dados, int ordem) {
-    arquivoTxt = txt;
-    arquivoBin = bin;
-    arquivoDados = dados;
-    M = ordem;
-    T = (M + 1) / 2;
-    raiz = 1;
-    nextNodeId = 1;
-    // leituraDisco = 0;
-    // escritaDisco = 0;
-}
+    arquivoTxt = txt;       // Inicializa o nome do Arquivo de Texto.
+    arquivoBin = bin;       // Inicializa o nome do Arquivo de Indice Binario (onde a Arvore eh Salva).
+    arquivoDados = dados;   // Inicializa o nome do Arquivo de Dados Principal.
+    M = ordem;              // Define a Ordem da Arvore (M).
+    T = (M + 1) / 2;        // Define o Grau Minimo (T) necessario.
+    raiz = 1;               // Inicializa o ID do Noh Raiz.
+    nextNodeId = 1;         // Inicializa o ID do proximo Noh a ser Criado.
+    // leituraDisco = 0;    // Leitura do Disco Nao Implementado.
+    // escritaDisco = 0;    // Escrita no Disco Nao Implementado.
 
-// [n (1 int), folha (1 int), chaves (M-1 ints), filhos (M ints)]
+} // Fim do CONSTRUTOR
+// ====================================================================================================================
+
+// ====================================================================================================================
+// METODOS DE SEQUENCIAMENTO E I/O DE DISCO:
+
+// Calcula o Numero de Inteiros que compoem um Noh no Disco.
+// FORMATO: [n (1 int), folha (1 int), chaves (M-1 ints), filhos (M ints)]
 int ArvoreMVias::nodeInts() const {
     return 2 + (M - 1) + M; // 2 * M + 1
 }
