@@ -13,7 +13,7 @@
 
 // ====================================================================================================================
 
-// INCLUSAO DE BIBLIOTECAS E ARQUIVOS (+ using namespace):
+// INCLUSAO DE BIBLIOTECAS (+ using namespace):
 #include <iostream>    // Operacoes de Entradas e Saidas
 #include <fstream>     // Manipulacao de Arquivos
 #include <iomanip>     // Formatacao de Saida
