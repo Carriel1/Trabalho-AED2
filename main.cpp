@@ -18,19 +18,11 @@ using namespace std;       // Simplificacao do Codigo
 // INICIO DA FUNCAO MAIN (PRINCIPAL):
 int main() {
 
-    // ================================================================================================================
-    // TRECHO A SER SUBSTITUIDO:
-    int ordem;
-    cout << "Digite a ordem da arvore B (M >= 3): ";
-    cin >> ordem;
-    if (ordem < 3) {
-        cout << "Ordem precisa ser >= 3. Encerrando.\n";
-        return 1;    // Retorna como um erro
-    } // Fim do IF
+    cout << "Arvor B de ordem M = 3 (fixo)" << endl;
 
     // Instancia a classe ArvoreMVias com os nomes de arquivos
-    // binários de índice e dados, e a ordem M.
-    ArvoreMVias arvore("mvias.txt", "mvias.bin", "dados.bin", ordem);
+    // binários de índice e dados.
+    ArvoreMVias arvore("mvias.txt", "mvias.bin", "dados.bin");
     // ================================================================================================================
 
     // ================================================================================================================
@@ -51,9 +43,9 @@ int main() {
         cout << "====================| MENU PRINCIPAL |====================\n" << endl;
         cout << "1 - Imprimir indice" << endl;
         cout << "2 - Imprimir arquivo principal" << endl;
-        cout << "3 - Buscar elemento" << endl;
-        cout << "4 - Inserir elemento" << endl;
-        cout << "5 - Remover elemento" << endl;
+        cout << "3 - Buscar livro" << endl;
+        cout << "4 - Inserir livro" << endl;
+        cout << "5 - Remover livro" << endl;
         cout << "0 - Sair" << endl;
         cout << "\nEscolha: ";
         int escolha;                         // Variavel de opcao para o que se deseja fazer do menu.
@@ -89,7 +81,7 @@ int main() {
         else if (escolha == 3) {
             // Solicita a chave a ser procurada.
             int chave;
-            cout << "Digite a chave para buscar: ";
+            cout << "Digite o ID do livro para buscar: ";
             if (!(cin >> chave)) continue;
 
             // Realiza a busca com o mSearch.
@@ -103,7 +95,7 @@ int main() {
             // Caso a chave tenha sido encontrada no indice, mostra o conteudo associado no arquivo
             // de dados, imprimindo apenas os registros do arquivo principal com a chave.
             if (res.encontrou) {
-                cout << "Conteudo(s) encontrado(s) no arquivo principal (inclui registros deletados):\n";
+                cout << "Conteudo(s) encontrado(s) no arquivo principal:\n";
                 arvore.imprimirArquivoPrincipal(chave);
             } // Fim do IF
         } // Fim da Entrada 3
@@ -114,23 +106,32 @@ int main() {
         // Realiza a insercao de um item na arvore.
         else if (escolha == 4) {
             // Solicita a chave a ser inserida (ID):
-            int chave;
-            string dados;
-            cout << "Digite a chave para inserir: ";
+            int chave, ano;
+            string titulo, autor, genero;
+            cout << "Digite o ID do livro a ser adicionado: ";
             if (!(cin >> chave)) continue;
 
-            // Solicita os dados (ex: uma frase).
-            cout << "Digite os dados (limite " << MAX_DATA_SIZE << " chars): ";
+            // Solicita o titulo do livro.
+            cout << "Digite o titulo do livro: ";
             cin.ignore();            // Limpa o buffer para permitir a leitura de strings com
-            getline(cin, dados);     // espacos antes de usar o getline.
+            getline(cin, titulo);    // espacos antes de usar o getline.
 
-            // Garante que o tamanho nao exceda o limite definido no Registro
-            if (dados.length() > MAX_DATA_SIZE) {
-                dados = dados.substr(0, MAX_DATA_SIZE);
-            } // Fim do IF
+            // Solicita o autor do livro.
+            cout << "Digite o autor do livro: ";
+            cin.ignore();            // Limpa o buffer para permitir a leitura de strings com
+            getline(cin, autor);     // espacos antes de usar o getline.
+
+            // Solicita o ano de publicacao do livro.
+            cout << "Digite o ano de publicacao do livro: ";
+            if (!(cin >> ano)) continue;    // Caso a leitura falhe, volta ao inicio do loop.
+
+            // Solicita o genero do livro.
+            cout << "Digite o genero do livro: ";
+            cin.ignore();            // Limpa o buffer para permitir a leitura de strings com
+            getline(cin, genero);     // espacos antes de usar o getline.
 
             // Insere a Chave no Indice e o Registro no Arquivo de Dados
-            arvore.insertB(chave, dados);
+            arvore.insertB(chave, titulo, autor, ano, genero);
         } // Fim da Entrada 4
         // ============================================================================================================
 
@@ -140,7 +141,7 @@ int main() {
         else if (escolha == 5) {
             // Solicita a chave a ser removida (ID):
             int chave;
-            cout << "Digite a chave para remover: ";
+            cout << "Digite o ID do livro para remover: ";
             if (!(cin >> chave)) continue;
 
             arvore.deleteB(chave);
@@ -167,6 +168,7 @@ int main() {
         // Solicita a confirmacao quanto a continuacao.
         cout << "\nDeseja continuar? (s/n): ";
         cin >> opcao;    // Caso NAO seja digitado 's'/'S', sai do loop e encerra o programa.
+        cout << endl;
         // ============================================================================================================
 
     } // Fim do WHILE
