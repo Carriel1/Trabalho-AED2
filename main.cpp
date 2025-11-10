@@ -18,7 +18,7 @@ using namespace std;       // Simplificacao do Codigo
 // INICIO DA FUNCAO MAIN (PRINCIPAL):
 int main() {
 
-    cout << "Arvor B de ordem M = 3 (fixo)" << endl;
+    cout << "Arvore B de ordem M = 3 (fixo)" << endl;
 
     // Instancia a classe ArvoreMVias com os nomes de arquivos
     // binários de índice e dados.
