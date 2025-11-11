@@ -115,7 +115,6 @@ int main() {
             getline(cin, titulo);     // espacos antes de usar o getline.
 
             cout << "Digite o autor do livro: ";
-            cin.ignore();
             getline(cin, autor);
 
             cout << "Digite o ano do livro: ";
