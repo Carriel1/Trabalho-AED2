@@ -118,7 +118,6 @@ int main() {
 
             // Solicita o autor do livro.
             cout << "Digite o autor do livro: ";
-            cin.ignore();            // Limpa o buffer para permitir a leitura de strings com
             getline(cin, autor);     // espacos antes de usar o getline.
 
             // Solicita o ano de publicacao do livro.
